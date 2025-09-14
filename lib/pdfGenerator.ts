@@ -33,14 +33,31 @@ interface MedicalFormData {
   physicianLicense?: string;
   reportId?: string;
 }
+
+interface AutoTableOptions {
+  startY?: number;
+  theme?: string;
+  styles?: {
+    fontSize?: number;
+    cellPadding?: number;
+    lineWidth?: number;
+  };
+  columnStyles?: Record<string | number, {
+    cellWidth?: number;
+    fontStyle?: string;
+  }>;
+  body: (string | number)[][];
+}
+
 declare module "jspdf" {
   interface jsPDF {
     lastAutoTable?: {
       finalY: number;
     };
-    autoTable: (options: any) => void;
+    autoTable: (options: AutoTableOptions) => void;
   }
 }
+
 
 export const generateMedicalReportPDF = async (
   formData: MedicalFormData
@@ -233,7 +250,7 @@ export const generateMedicalReportPDF = async (
   });
 
   // === SYSTEMIC & LABORATORY EXAMINATION ===
-  currentY = (doc as any).lastAutoTable.finalY + 3;
+  currentY = (doc.lastAutoTable?.finalY || 0) + 3;
   const leftColumnX = 12;
   const rightColumnX = 110;
   const columnWidth = 90;
