@@ -7,12 +7,16 @@ import Log from "@/models/Log";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import { NextApiRequest } from "next";
+import { AdapterUser } from "next-auth/adapters";
+import { JWT } from "next-auth/jwt";
+import { Session, User as NextAuthUser } from "next-auth";
+
 interface SignInParams {
-  user: any;
-  account: any;
-  profile?: any;
-  email?: any;
-  credentials?: any;
+  user: NextAuthUser | AdapterUser;
+  account: { provider: string; providerAccountId: string } | null;
+  profile?: unknown;
+  email?: { verificationRequest?: boolean };
+  credentials?: Record<string, unknown>;
   req?: NextApiRequest;
 }
 
@@ -138,7 +142,8 @@ export const authOptions: NextAuthOptions = {
               existingUser.authProvider = "google";
             }
             await existingUser.save();
-            user.role = existingUser.role;
+            // Use type assertion for the role property
+            (user as any).role = existingUser.role;
             user.id = existingUser._id.toString();
             return true; 
           } else {
@@ -181,7 +186,8 @@ export const authOptions: NextAuthOptions = {
 
     async jwt({ token, user, account }) {
       if (user) {
-        token.role = user.role;
+        // Use type assertion for the role property
+        token.role = (user as any).role;
         token.id = user.id;
       }
       if (account?.provider === "google" && !token.role) {
