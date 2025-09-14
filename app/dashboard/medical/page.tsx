@@ -1,8 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Calendar, FileText, TestTube, LogOut, X } from "lucide-react";
+import { FileText, LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
-import { generateMedicalReportPDF } from "@/lib/pdfGenerator";
 import Link from "next/link";
 
 interface Applicant {
@@ -58,12 +57,6 @@ const MedicalDashboard = () => {
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(
     null
   );
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [reportLoading, setReportLoading] = useState(false);
-  const [generatedReport, setGeneratedReport] = useState<{
-    fileUrl: string;
-    reportId: string;
-  } | null>(null);
   const [formData, setFormData] = useState<ReportFormData>({
     name: "",
     age: 0,
@@ -141,7 +134,7 @@ const MedicalDashboard = () => {
     if (!confirm("Are you sure you want to reject this applicant?")) return;
 
     try {
-      const res = await fetch(`/api/applicants/${applicantId}`, {
+      await fetch(`/api/applicants/${applicantId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -149,15 +142,11 @@ const MedicalDashboard = () => {
         body: JSON.stringify({ status: "rejected" }),
       });
 
-      if (res.ok) {
-        // Refresh applicants list
-        const updatedRes = await fetch("/api/applicants");
-        const data = await updatedRes.json();
-        setApplicants(data);
-        alert("Applicant rejected successfully");
-      } else {
-        alert("Failed to reject applicant");
-      }
+      // Refresh applicants list
+      const updatedRes = await fetch("/api/applicants");
+      const data = await updatedRes.json();
+      setApplicants(data);
+      alert("Applicant rejected successfully");
     } catch (error) {
       console.error("Error rejecting applicant:", error);
       alert("Error rejecting applicant");
@@ -166,7 +155,7 @@ const MedicalDashboard = () => {
 
   const updateApplicantStatus = async (applicantId: string, status: string) => {
     try {
-      const res = await fetch(`/api/applicants/${applicantId}`, {
+      await fetch(`/api/applicants/${applicantId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -176,29 +165,6 @@ const MedicalDashboard = () => {
     } catch (error) {
       console.error("Error updating applicant status:", error);
     }
-  };
-
-  const validateReport = async (reportId: string) => {
-    try {
-      const res = await fetch(`/api/reports/validate?reportId=${reportId}`);
-      const data = await res.json();
-
-      if (data.valid) {
-        alert("Report is valid and authenticated");
-        return data.report;
-      } else {
-        alert("Report validation failed");
-        return null;
-      }
-    } catch (error) {
-      console.error("Validation error:", error);
-      alert("Error validating report");
-      return null;
-    }
-  };
-
-  const generateQRCode = (reportId: string) => {
-    alert(`QR Code for report validation: ${reportId}`);
   };
 
   const validateForm = () => {
@@ -225,81 +191,9 @@ const MedicalDashboard = () => {
     return true;
   };
 
-  const handleGenerateReport = async () => {
-    if (!validateForm()) return;
-    await generateReport();
-  };
-
-  const pendingCount = applicants.filter((a) => a.status === "pending").length;
-
-  const openReportModal = async (applicant: Applicant) => {
-    setSelectedApplicant(applicant);
-
-    // Update applicant status to under_review
-    await updateApplicantStatus(applicant._id, "under_review");
-
-    // Refresh applicants list to show updated status
-    const res = await fetch("/api/applicants");
-    const data = await res.json();
-    setApplicants(data);
-
-    // Calculate age from date of birth
-    const birthDate = new Date(applicant.dateOfBirth);
-    const today = new Date();
-    const age = today.getFullYear() - birthDate.getFullYear();
-
-    // Pre-fill form with applicant data
-    setFormData({
-      ...formData,
-      name: `${applicant.firstName} ${applicant.lastName}`,
-      age: age,
-      sex: applicant.gender,
-      passportNo: applicant.passportNumber,
-      passportExpiry: applicant.passportExpiry,
-      nationality: applicant.nationality,
-      destination: applicant.destinationCountry,
-    });
-
-    setShowReportModal(true);
-    setGeneratedReport(null);
-  };
-
-  const closeReportModal = () => {
-    setShowReportModal(false);
-    setSelectedApplicant(null);
-    setGeneratedReport(null);
-  };
-
-  const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleLabResultChange = (
-    testName: string,
-    field: keyof LabResult,
-    value: string
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      labResults: {
-        ...prev.labResults,
-        [testName]: {
-          ...prev.labResults[testName],
-          [field]: value,
-        },
-      },
-    }));
-  };
-
   const generateReport = async () => {
     if (!selectedApplicant) return;
 
-    setReportLoading(true);
     try {
       const response = await fetch("/api/reports/generate", {
         method: "POST",
@@ -327,8 +221,6 @@ const MedicalDashboard = () => {
           }
         }
 
-        setGeneratedReport({ fileUrl, reportId });
-
         // Refresh applicants list
         const res = await fetch("/api/applicants");
         const data = await res.json();
@@ -340,10 +232,10 @@ const MedicalDashboard = () => {
     } catch (error) {
       console.error("Error:", error);
       alert("Failed to generate report");
-    } finally {
-      setReportLoading(false);
     }
   };
+
+  const pendingCount = applicants.filter((a) => a.status === "pending").length;
 
   return (
     <div className="p-6 mx-auto min-h-screen bg-gray-100 text-black">
@@ -465,7 +357,6 @@ const MedicalDashboard = () => {
                               : "bg-red-600 text-white hover:bg-red-700"
                           }`}
                         >
-                          <X size={14} className="mr-1" />
                           Reject
                         </button>
 

@@ -2,8 +2,6 @@
 import React from "react";
 import {
   Users,
-  FileText,
-  Calendar,
   Activity,
   DollarSign,
   Globe,

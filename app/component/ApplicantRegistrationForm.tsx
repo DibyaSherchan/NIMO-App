@@ -37,7 +37,6 @@ const DESTINATION_COUNTRIES = [
 ];
 
 const ApplicantRegistrationForm = () => {
-  const { data: session } = useSession();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
