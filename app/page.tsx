@@ -1,5 +1,4 @@
 "use client";
-import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useState } from "react";
 import Head from "next/head";
@@ -19,7 +18,6 @@ import {
   UserPlus,
   Microscope,
   Eye,
-  Calendar,
   FileCheck,
   AlertCircle,
   Activity,

@@ -33,38 +33,67 @@ interface MedicalFormData {
   physicianLicense?: string;
   reportId?: string;
 }
+declare module "jspdf" {
+  interface jsPDF {
+    lastAutoTable?: {
+      finalY: number;
+    };
+    autoTable: (options: any) => void;
+  }
+}
 
-export const generateMedicalReportPDF = async (formData: MedicalFormData): Promise<Blob> => {
+export const generateMedicalReportPDF = async (
+  formData: MedicalFormData
+): Promise<Blob> => {
   const doc = new jsPDF("p", "mm", "a4");
   let currentY = 10;
 
   // === HEADER ===
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("Nippon Medical Centre Pvt. Ltd.", 105, currentY, { align: "center" });
-  
+  doc.text("Nippon Medical Centre Pvt. Ltd.", 105, currentY, {
+    align: "center",
+  });
+
   currentY += 5;
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text("(An authorized medical centre by the Government of Nepal)", 105, currentY, { align: "center" });
-  
+  doc.text(
+    "(An authorized medical centre by the Government of Nepal)",
+    105,
+    currentY,
+    { align: "center" }
+  );
+
   currentY += 3;
-  doc.text("Balaju-16, Kathmandu, Ph. +977-1-4338273/E-mail: supply10@hotmail.com", 105, currentY, { align: "center" });
-  
+  doc.text(
+    "Balaju-16, Kathmandu, Ph. +977-1-4338273/E-mail: supply10@hotmail.com",
+    105,
+    currentY,
+    { align: "center" }
+  );
+
   currentY += 3;
-  doc.text("(Affiliated to Nepal Medical Occupational&apos;s Organization)", 105, currentY, { align: "center" });
-  
+  doc.text(
+    "(Affiliated to Nepal Medical Occupational&apos;s Organization)",
+    105,
+    currentY,
+    { align: "center" }
+  );
+
   currentY += 5;
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setFillColor(0, 0, 0);
   doc.setTextColor(0, 0, 0);
-  doc.text("MEDICAL EXAMINATION REPORT", 105, currentY + 1, { align: "center" });
+  doc.text("MEDICAL EXAMINATION REPORT", 105, currentY + 1, {
+    align: "center",
+  });
   doc.setTextColor(0, 0, 0);
-  
+
   currentY += 8;
   doc.setFillColor(255, 192, 203);
-  doc.rect(95, currentY - 2, 20, 4, 'F');
+  doc.rect(95, currentY - 2, 20, 4, "F");
   doc.setFont("helvetica", "bold");
   doc.text("FIT", 105, currentY + 1, { align: "center" });
 
@@ -74,30 +103,54 @@ export const generateMedicalReportPDF = async (formData: MedicalFormData): Promi
     startY: currentY,
     theme: "grid",
     styles: { fontSize: 7, cellPadding: 1, lineWidth: 0.1 },
-    columnStyles: { 
-      0: { cellWidth: 25, fontStyle: 'bold' }, 
-      1: { cellWidth: 35 }, 
-      2: { cellWidth: 25, fontStyle: 'bold' }, 
+    columnStyles: {
+      0: { cellWidth: 25, fontStyle: "bold" },
+      1: { cellWidth: 35 },
+      2: { cellWidth: 25, fontStyle: "bold" },
       3: { cellWidth: 35 },
-      4: { cellWidth: 70 }
+      4: { cellWidth: 70 },
     },
     body: [
-      ["Name", formData.name || "MR MAHESH NEUPANE", "Age", formData.age || "28", ""],
+      [
+        "Name",
+        formData.name || "MR MAHESH NEUPANE",
+        "Age",
+        formData.age || "28",
+        "",
+      ],
       ["", "", "Sex", formData.sex || "M", ""],
       ["", "", "Marital Status", formData.maritalStatus || "UNMARRIED", ""],
-      ["Passport No.", formData.passportNo || "10962098", "Expired On", formData.passportExpiry || "16 JUN 2028", ""],
-      ["", "", "Passport Issue Place", formData.passportIssuePlace || "NEPAL", ""],
-      ["Medical Examination Date", formData.examinationDate || "13/09/2024", "Working Applied for", formData.destination || "JAPAN", ""],
-      ["", "", "Nationality", formData.nationality || "NEPALI", ""]
+      [
+        "Passport No.",
+        formData.passportNo || "10962098",
+        "Expired On",
+        formData.passportExpiry || "16 JUN 2028",
+        "",
+      ],
+      [
+        "",
+        "",
+        "Passport Issue Place",
+        formData.passportIssuePlace || "NEPAL",
+        "",
+      ],
+      [
+        "Medical Examination Date",
+        formData.examinationDate || "13/09/2024",
+        "Working Applied for",
+        formData.destination || "JAPAN",
+        "",
+      ],
+      ["", "", "Nationality", formData.nationality || "NEPALI", ""],
     ],
   });
 
   // === GENERAL EXAMINATION ===
-  currentY = (doc as any).lastAutoTable.finalY + 3;
+  currentY = (doc.lastAutoTable?.finalY || 0) + 3;
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setFillColor(64, 64, 64);
-  doc.rect(10, currentY - 2, 190, 4, 'F');
+  doc.rect(10, currentY - 2, 190, 4, "F");
   doc.setTextColor(255, 255, 255);
   doc.text("GENERAL EXAMINATION", 12, currentY + 1);
   doc.setTextColor(0, 0, 0);
@@ -105,7 +158,11 @@ export const generateMedicalReportPDF = async (formData: MedicalFormData): Promi
   currentY += 6;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
-  doc.text("1. Past history of serious illness, Major surgery, and significant psychological problem including (Epilepsy and Depression) None", 12, currentY);
+  doc.text(
+    "1. Past history of serious illness, Major surgery, and significant psychological problem including (Epilepsy and Depression) None",
+    12,
+    currentY
+  );
   currentY += 3;
   doc.text("2. Past history of allergy None", 12, currentY);
 
@@ -115,16 +172,63 @@ export const generateMedicalReportPDF = async (formData: MedicalFormData): Promi
     startY: currentY,
     theme: "grid",
     styles: { fontSize: 6, cellPadding: 1, lineWidth: 0.1 },
-    columnStyles: { 
-      0: { cellWidth: 18 }, 1: { cellWidth: 12 }, 2: { cellWidth: 8 },
-      3: { cellWidth: 18 }, 4: { cellWidth: 12 }, 5: { cellWidth: 8 },
-      6: { cellWidth: 18 }, 7: { cellWidth: 12 }, 8: { cellWidth: 8 },
-      9: { cellWidth: 25 }, 10: { cellWidth: 12 }, 11: { cellWidth: 8 }
+    columnStyles: {
+      0: { cellWidth: 18 },
+      1: { cellWidth: 12 },
+      2: { cellWidth: 8 },
+      3: { cellWidth: 18 },
+      4: { cellWidth: 12 },
+      5: { cellWidth: 8 },
+      6: { cellWidth: 18 },
+      7: { cellWidth: 12 },
+      8: { cellWidth: 8 },
+      9: { cellWidth: 25 },
+      10: { cellWidth: 12 },
+      11: { cellWidth: 8 },
     },
     body: [
-      ["Height", formData.height || "166", "cm", "Weight", formData.weight || "48", "kg", "Pulse", formData.pulse || "82", "/min", "Temperature", formData.temperature || "98", "°F"],
-      ["B/P", formData.bloodPressure || "110/70", "mmHg", "Jaundice", "Absent", "", "Pallor", "Absent", "", "Cyanosis", "Absent", ""],
-      ["Clubbing", "Absent", "", "Oedema", "Absent", "", "Ascites", "Absent", "", "Lymph Node", "Absent", ""]
+      [
+        "Height",
+        formData.height || "166",
+        "cm",
+        "Weight",
+        formData.weight || "48",
+        "kg",
+        "Pulse",
+        formData.pulse || "82",
+        "/min",
+        "Temperature",
+        formData.temperature || "98",
+        "°F",
+      ],
+      [
+        "B/P",
+        formData.bloodPressure || "110/70",
+        "mmHg",
+        "Jaundice",
+        "Absent",
+        "",
+        "Pallor",
+        "Absent",
+        "",
+        "Cyanosis",
+        "Absent",
+        "",
+      ],
+      [
+        "Clubbing",
+        "Absent",
+        "",
+        "Oedema",
+        "Absent",
+        "",
+        "Ascites",
+        "Absent",
+        "",
+        "Lymph Node",
+        "Absent",
+        "",
+      ],
     ],
   });
 
@@ -138,12 +242,12 @@ export const generateMedicalReportPDF = async (formData: MedicalFormData): Promi
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setFillColor(64, 64, 64);
-  doc.rect(leftColumnX, currentY - 2, columnWidth, 4, 'F');
+  doc.rect(leftColumnX, currentY - 2, columnWidth, 4, "F");
   doc.setTextColor(255, 255, 255);
   doc.text("SYSTEMIC EXAMINATION", leftColumnX + 2, currentY + 1);
 
   // Right column
-  doc.rect(rightColumnX, currentY - 2, columnWidth, 4, 'F');
+  doc.rect(rightColumnX, currentY - 2, columnWidth, 4, "F");
   doc.text("LABORATORY EXAMINATION", rightColumnX + 2, currentY + 1);
   doc.setTextColor(0, 0, 0);
 
@@ -169,26 +273,61 @@ export const generateMedicalReportPDF = async (formData: MedicalFormData): Promi
     ["Gynecological Examination", ""],
     ["Radiological (Chest X-Ray):", "Normal"],
     ["ECG", ""],
-    ["CLINICAL IMPRESSION:", "Normal"]
+    ["CLINICAL IMPRESSION:", "Normal"],
   ];
 
   const labExams = [
     ["", "Blood Examination", "Result", "Reference Ranges"],
     ["", "Total WBC Count", formData.labResults?.wbc?.result || "6,700", ""],
     ["", "Differential Count", "", ""],
-    ["HEMATOLOGY", "Neutrophils", formData.labResults?.neutrophils?.result || "66", "51-75%"],
-    ["", "Lymphocytes", formData.labResults?.lymphocytes?.result || "27", "25-40%"],
-    ["", "Eosinophils", formData.labResults?.eosinophils?.result || "03", "1-6%"],
+    [
+      "HEMATOLOGY",
+      "Neutrophils",
+      formData.labResults?.neutrophils?.result || "66",
+      "51-75%",
+    ],
+    [
+      "",
+      "Lymphocytes",
+      formData.labResults?.lymphocytes?.result || "27",
+      "25-40%",
+    ],
+    [
+      "",
+      "Eosinophils",
+      formData.labResults?.eosinophils?.result || "03",
+      "1-6%",
+    ],
     ["", "Monocytes", formData.labResults?.monocytes?.result || "04", "2-8%"],
     ["", "Basophils", formData.labResults?.basophils?.result || "00", "0-3%"],
     ["", "ESR", formData.labResults?.esr?.result || "10", "M-15mm/hr, F-20"],
-    ["", "Hemoglobin", formData.labResults?.hemoglobin?.result || "12.6", "M: 14g/100ml, F:12g/100ml"],
+    [
+      "",
+      "Hemoglobin",
+      formData.labResults?.hemoglobin?.result || "12.6",
+      "M: 14g/100ml, F:12g/100ml",
+    ],
     ["", "Malaria Parasite", "Not Found", ""],
     ["", "Micro Filaria", "Not Found", ""],
-    ["BIOCHEMISTRY", "Random Blood Sugar", formData.labResults?.rbs?.result || "102", "60-140 mg%"],
+    [
+      "BIOCHEMISTRY",
+      "Random Blood Sugar",
+      formData.labResults?.rbs?.result || "102",
+      "60-140 mg%",
+    ],
     ["", "Urea", formData.labResults?.urea?.result || "25", "20-40mg%"],
-    ["", "Creatinine", formData.labResults?.creatinine?.result || "1.0", "0.6-1.4 mg%"],
-    ["", "Bilirubin Total (Direct)", formData.labResults?.bilirubin?.result || "0.90/0.3", "0.6-1.2 mg% (T) 0.2-0.6(D)"],
+    [
+      "",
+      "Creatinine",
+      formData.labResults?.creatinine?.result || "1.0",
+      "0.6-1.4 mg%",
+    ],
+    [
+      "",
+      "Bilirubin Total (Direct)",
+      formData.labResults?.bilirubin?.result || "0.90/0.3",
+      "0.6-1.2 mg% (T) 0.2-0.6(D)",
+    ],
     ["", "SGPT", formData.labResults?.sgpt?.result || "29", "Up to 41U"],
     ["", "SGOT", formData.labResults?.sgot?.result || "27", "Up to 41U"],
     ["SEROLOGY", "Anti-HIV (1&2)", "None Reactive", ""],
@@ -203,7 +342,7 @@ export const generateMedicalReportPDF = async (formData: MedicalFormData): Promi
     ["", "Epithelial cells /hpf", "1-2", ""],
     ["OTHER", "Opiates", "Negative", ""],
     ["", "Cannabis", "Negative", ""],
-    ["", "Mantoux Test", "Negative", ""]
+    ["", "Mantoux Test", "Negative", ""],
   ];
 
   // Systemic exam rendering
@@ -218,8 +357,20 @@ export const generateMedicalReportPDF = async (formData: MedicalFormData): Promi
   // Lab exam rendering
   yPos = currentY;
   labExams.forEach((row, index) => {
-    doc.setFont("helvetica", index === 0 || ["HEMATOLOGY", "BIOCHEMISTRY", "SEROLOGY", "URINE", "OTHER"].includes(row[0]) ? "bold" : "normal");
-    if (["HEMATOLOGY", "BIOCHEMISTRY", "SEROLOGY", "URINE", "OTHER"].includes(row[0])) {
+    doc.setFont(
+      "helvetica",
+      index === 0 ||
+        ["HEMATOLOGY", "BIOCHEMISTRY", "SEROLOGY", "URINE", "OTHER"].includes(
+          row[0]
+        )
+        ? "bold"
+        : "normal"
+    );
+    if (
+      ["HEMATOLOGY", "BIOCHEMISTRY", "SEROLOGY", "URINE", "OTHER"].includes(
+        row[0]
+      )
+    ) {
       doc.text(row[0], rightColumnX, yPos);
     } else {
       doc.text(row[1], rightColumnX, yPos);
@@ -234,10 +385,12 @@ export const generateMedicalReportPDF = async (formData: MedicalFormData): Promi
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
   doc.text("DEAR SIR,", 12, currentY);
-  
+
   currentY += 5;
   doc.text(
-    `THIS IS TO CERTIFY THAT MR. ${(formData.name || "MAHESH NEUPANE").toUpperCase()} IS CLINICALLY AND MENTALLY FIT AND THERE IS NO EVIDENCE OF COMMUNICABLE DISEASE IN HIM.`,
+    `THIS IS TO CERTIFY THAT MR. ${(
+      formData.name || "MAHESH NEUPANE"
+    ).toUpperCase()} IS CLINICALLY AND MENTALLY FIT AND THERE IS NO EVIDENCE OF COMMUNICABLE DISEASE IN HIM.`,
     12,
     currentY,
     { maxWidth: 180 }
@@ -269,13 +422,19 @@ export const generateMedicalReportPDF = async (formData: MedicalFormData): Promi
   currentY += 10;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6);
-  doc.text("This Report is valid for Two months from the date of Medical Examination", 12, currentY);
+  doc.text(
+    "This Report is valid for Two months from the date of Medical Examination",
+    12,
+    currentY
+  );
 
   // Government registration number
   doc.text("Gov. Reg. No. 69847 066/067", 160, 12);
 
   // === QR CODE ===
-  const verifyUrl = `https://localhost:3000/verify/${formData.reportId || "sample-id"}`;
+  const verifyUrl = `https://localhost:3000/verify/${
+    formData.reportId || "sample-id"
+  }`;
   const qrDataUrl = await QRCode.toDataURL(verifyUrl);
   doc.addImage(qrDataUrl, "PNG", 14, 260, 30, 30);
   doc.setFontSize(6);
