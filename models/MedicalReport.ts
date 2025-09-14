@@ -1,49 +1,58 @@
-import mongoose, { Document, Model, Schema, Types } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface IMedicalReport extends Document {
-  _id: Types.ObjectId;
   reportId: string;
-  applicantId: Types.ObjectId;
+  applicantId: string;
   reportType: string;
-  testResults: {
-    hiv: string;
-    tuberculosis: string;
-    malaria: string;
-    hepatitisB: string;
-    hepatitisC: string;
-    syphilis: string;
-    // Add other tests as needed
-  };
+  testResults: Record<string, any>;
   doctorRemarks: string;
-  conductedBy: Types.ObjectId;
-  reportDate: Date;
-  qrCode: string;
-  isVerified: boolean;
+  physicalExamination: {
+    height: string;
+    weight: string;
+    bloodPressure: string;
+    pulse: string;
+    temperature: string;
+  };
+  specialTests: {
+    chestXRay: string;
+    ecg: string;
+    vision: string;
+    hearing: string;
+    urineTest: string;
+    stoolTest: string;
+    pregnancyTest: string;
+  };
+  vaccinationStatus: string;
+  pdfData: string;
   createdAt: Date;
-  updatedAt: Date;
 }
 
-const medicalReportSchema = new Schema<IMedicalReport>(
-  {
-    reportId: { type: String, required: true, unique: true, index: true },
-    applicantId: { type: Schema.Types.ObjectId, ref: "Applicant", required: true },
-    reportType: { type: String, required: true },
-    testResults: {
-      hiv: String,
-      tuberculosis: String,
-      malaria: String,
-      hepatitisB: String,
-      hepatitisC: String,
-      syphilis: String
-    },
-    doctorRemarks: String,
-    conductedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    reportDate: { type: Date, default: Date.now },
-    qrCode: { type: String, required: true },
-    isVerified: { type: Boolean, default: false }
+const MedicalReportSchema: Schema = new Schema({
+  reportId: { type: String, required: true, unique: true, index: true },
+  applicantId: { type: String, required: true },
+  reportType: { type: String, required: true },
+  testResults: { type: Map, of: Schema.Types.Mixed },
+  doctorRemarks: { type: String },
+  physicalExamination: {
+    height: String,
+    weight: String,
+    bloodPressure: String,
+    pulse: String,
+    temperature: String,
   },
-  { timestamps: true }
-);
+  specialTests: {
+    chestXRay: String,
+    ecg: String,
+    vision: String,
+    hearing: String,
+    urineTest: String,
+    stoolTest: String,
+    pregnancyTest: String,
+  },
+  vaccinationStatus: String,
+  pdfData: String, // Store PDF as base64 string
+  createdAt: { type: Date, default: Date.now },
+});
 
-const MedicalReport: Model<IMedicalReport> = mongoose.models.MedicalReport || mongoose.model<IMedicalReport>("MedicalReport", medicalReportSchema);
-export default MedicalReport;
+export default mongoose.models.MedicalReport || 
+  mongoose.model<IMedicalReport>("MedicalReport", MedicalReportSchema);

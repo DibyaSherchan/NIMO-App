@@ -1,16 +1,13 @@
-// app/layout.tsx (Create this if it doesn't exist)
-import type { Metadata } from 'next';
-import './globals.css'; // Your global styles
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import SessionProvider from "./providers";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'NIMO - Foreign Employment Information Management System',
-  description: 'Streamline your foreign employment journey with NIMO\'s comprehensive health management and automation features. Secure, fast, and reliable processing for international job seekers.',
-  keywords: 'foreign employment, medical tests, NIMO, Nepal, international jobs, health screening, employment processing',
-  openGraph: {
-    title: 'NIMO - Foreign Employment Information Management System',
-    description: 'Your comprehensive solution for foreign employment applications with integrated health management.',
-    type: 'website',
-  },
+  title: "NIMO - Foreign Employment Information Management System",
+  description: "A comprehensive system for managing foreign employment information and medical records",
 };
 
 export default function RootLayout({
@@ -20,7 +17,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={inter.className}>
+        <SessionProvider>
+          {children}
+        </SessionProvider>
+      </body>
     </html>
   );
 }

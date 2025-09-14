@@ -1,24 +1,21 @@
-import mongoose, { Document, Model, Schema, Types } from "mongoose";
+import mongoose from "mongoose";
 
-export interface IUser extends Document {
-  _id: Types.ObjectId;
-  name: string;
-  email: string;
-  password?: string;
-  role: "Admin" | "Agent" | "ForeignEmployee" | "MedicalOrganization";
-  authProvider: "credentials" | "google";
-  googleId?: string;
-  lastLogin: Date;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const userSchema = new Schema<IUser>(
+const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true, index: true },
-    password: { type: String, required: false },
+    name: {
+      type: String,
+      required: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+    password: {
+      type: String,
+      required: false,
+    },
     role: {
       type: String,
       required: true,
@@ -30,14 +27,34 @@ const userSchema = new Schema<IUser>(
       enum: ["credentials", "google"],
       default: "credentials",
     },
-    googleId: { type: String, required: false, sparse: true },
-    lastLogin: { type: Date, default: Date.now },
-    isActive: { type: Boolean, default: true },
+    googleId: {
+      type: String,
+      required: false,
+      sparse: true,
+    },
+    lastLogin: {
+      type: Date,
+      default: Date.now,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
+userSchema.index({ email: 1, role: 1 });
 
-// Fix for TypeScript model definition
-const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>("User", userSchema);
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
 export default User;

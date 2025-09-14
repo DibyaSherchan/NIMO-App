@@ -1,12 +1,11 @@
-// lib/auth.ts
-import { AuthOptions } from "next-auth";
+import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { connectDB } from "@/lib/mongodb";
-import User, { IUser } from "@/models/User";
+import User from "@/models/User";
 import bcrypt from "bcryptjs";
 
-export const authOptions: AuthOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -21,31 +20,20 @@ export const authOptions: AuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) return null;
 
-        try {
-          await connectDB();
-          const user: IUser | null = await User.findOne({ 
-            email: credentials.email.toLowerCase() 
-          });
+        await connectDB();
+        const user = await User.findOne({ email: credentials.email });
 
-          if (!user || !user.password) return null;
+        if (!user || !user.password) return null;
 
-          const isValid = await bcrypt.compare(credentials.password, user.password);
-          if (!isValid) return null;
+        const isValid = await bcrypt.compare(credentials.password, user.password);
+        if (!isValid) return null;
 
-          // Update last login
-          user.lastLogin = new Date();
-          await user.save();
-
-          return {
-            id: user._id.toString(),
-            email: user.email,
-            name: user.name,
-            role: user.role,
-          };
-        } catch (error) {
-          console.error("Authorize error:", error);
-          return null;
-        }
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        };
       },
     }),
   ],
@@ -53,36 +41,57 @@ export const authOptions: AuthOptions = {
   session: { strategy: "jwt" },
 
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === "google") {
+        try {
+          await connectDB();
+          const existingUser = await User.findOne({
+            $or: [
+              { email: user.email },
+              { googleId: account.providerAccountId },
+            ],
+          });
+
+          if (existingUser) {
+            existingUser.lastLogin = new Date();
+            if (!existingUser.googleId) {
+              existingUser.googleId = account.providerAccountId;
+              existingUser.authProvider = "google";
+            }
+            await existingUser.save();
+            user.role = existingUser.role;
+            user.id = existingUser._id.toString();
+            return true; 
+          } else {
+            return `/auth/signup?google=true&email=${encodeURIComponent(
+              user.email!
+            )}&name=${encodeURIComponent(user.name!)}`;
+          }
+        } catch (error) {
+          console.error("Error during Google sign in:", error);
+          return false;
+        }
+      }
+      return true; 
+    },
+
     async jwt({ token, user, account }) {
       if (user) {
         token.role = user.role;
         token.id = user.id;
       }
-
-      // Handle Google users
-      if (account?.provider === "google") {
+      if (account?.provider === "google" && !token.role) {
         try {
           await connectDB();
-          let dbUser = await User.findOne({ email: token.email });
-
+          const dbUser = await User.findOne({ email: token.email });
           if (dbUser) {
-            // Update existing user with Google info
-            if (!dbUser.googleId) {
-              dbUser.googleId = account.providerAccountId;
-              dbUser.authProvider = 'google';
-            }
-            dbUser.lastLogin = new Date();
-            await dbUser.save();
-            
             token.role = dbUser.role;
             token.id = dbUser._id.toString();
           }
-          // If user doesn't exist, they'll need to sign up first
         } catch (error) {
-          console.error("Google JWT callback error:", error);
+          console.error("Error fetching user role:", error);
         }
       }
-
       return token;
     },
 
@@ -97,6 +106,5 @@ export const authOptions: AuthOptions = {
 
   pages: {
     signIn: "/auth/signin",
-    error: "/auth/error",
   },
 };
