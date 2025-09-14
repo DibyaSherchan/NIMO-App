@@ -31,6 +31,7 @@
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/uuid": "^10.0.0",
     "dotenv": "^17.2.2",
     "env-cmd": "^11.0.0",
     "eslint": "^9",

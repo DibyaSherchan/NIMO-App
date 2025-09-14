@@ -199,7 +199,7 @@ const ApplicantRegistrationForm = () => {
       const submitData = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
         if (value !== null) {
-          submitData.append(key, value as any);
+          submitData.append(key, value as string | Blob);
         }
       });
 

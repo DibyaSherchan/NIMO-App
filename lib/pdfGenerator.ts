@@ -34,16 +34,6 @@ interface MedicalFormData {
   reportId?: string;
 }
 
-// Helper to format lab results
-const formatLabResults = (labResults: LabResults) => {
-  return Object.entries(labResults).map(([test, data]) => [
-    test,
-    data.result,
-    data.reference || "-",
-    data.unit || "",
-  ]);
-};
-
 export const generateMedicalReportPDF = async (formData: MedicalFormData): Promise<Blob> => {
   const doc = new jsPDF("p", "mm", "a4");
   let currentY = 10;
@@ -62,7 +52,7 @@ export const generateMedicalReportPDF = async (formData: MedicalFormData): Promi
   doc.text("Balaju-16, Kathmandu, Ph. +977-1-4338273/E-mail: supply10@hotmail.com", 105, currentY, { align: "center" });
   
   currentY += 3;
-  doc.text("(Affiliated to Nepal Medical Occupational's Organization)", 105, currentY, { align: "center" });
+  doc.text("(Affiliated to Nepal Medical Occupational&apos;s Organization)", 105, currentY, { align: "center" });
   
   currentY += 5;
   doc.setFontSize(10);
