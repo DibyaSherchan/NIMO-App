@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import Log from "@/models/Log";
 
 // Define interface for MongoDB duplicate key error
 interface MongoError extends Error {
@@ -19,10 +20,25 @@ function isMongoError(error: unknown): error is MongoError {
 }
 
 export async function POST(request: NextRequest) {
+  const userAgent = request.headers.get('user-agent') || 'unknown';
+
   try {
     const { name, email, password, role } = await request.json();
     
     if (!name || !email || !password || !role) {
+      await Log.create({
+        logId: crypto.randomUUID(),
+        action: "USER_REGISTER_FAILURE",
+        userId: null,
+        userRole: "anonymous",
+        userAgent,
+        details: {
+          reason: "MISSING_FIELDS",
+          error: "All fields are required",
+          attemptedData: { name: !!name, email: !!email, password: !!password, role: !!role }
+        }
+      });
+      
       return NextResponse.json(
         { error: "All fields are required" },
         { status: 400 }
@@ -31,6 +47,19 @@ export async function POST(request: NextRequest) {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      await Log.create({
+        logId: crypto.randomUUID(),
+        action: "USER_REGISTER_FAILURE",
+        userId: null,
+        userRole: "anonymous",
+        userAgent,
+        details: {
+          reason: "INVALID_EMAIL",
+          error: "Invalid email format",
+          attemptedEmail: email
+        }
+      });
+      
       return NextResponse.json(
         { error: "Invalid email format" },
         { status: 400 }
@@ -38,6 +67,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (password.length < 6) {
+      await Log.create({
+        logId: crypto.randomUUID(),
+        action: "USER_REGISTER_FAILURE",
+        userId: null,
+        userRole: "anonymous",
+        userAgent,
+        details: {
+          reason: "PASSWORD_TOO_SHORT",
+          error: "Password must be at least 6 characters long",
+          passwordLength: password.length
+        }
+      });
+      
       return NextResponse.json(
         { error: "Password must be at least 6 characters long" },
         { status: 400 }
@@ -51,6 +93,19 @@ export async function POST(request: NextRequest) {
       "MedicalOrganization",
     ];
     if (!validRoles.includes(role)) {
+      await Log.create({
+        logId: crypto.randomUUID(),
+        action: "USER_REGISTER_FAILURE",
+        userId: null,
+        userRole: "anonymous",
+        userAgent,
+        details: {
+          reason: "INVALID_ROLE",
+          error: "Invalid role specified",
+          attemptedRole: role
+        }
+      });
+      
       return NextResponse.json(
         { error: "Invalid role specified" },
         { status: 400 }
@@ -61,6 +116,19 @@ export async function POST(request: NextRequest) {
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     
     if (existingUser) {
+      await Log.create({
+        logId: crypto.randomUUID(),
+        action: "USER_REGISTER_FAILURE",
+        userId: null,
+        userRole: "anonymous",
+        userAgent,
+        details: {
+          reason: "DUPLICATE_EMAIL",
+          error: "User with this email already exists",
+          attemptedEmail: email.toLowerCase()
+        }
+      });
+      
       return NextResponse.json(
         { error: "User with this email already exists" },
         { status: 400 }
@@ -79,6 +147,18 @@ export async function POST(request: NextRequest) {
     });
 
     await newUser.save();
+    await Log.create({
+      logId: crypto.randomUUID(),
+      action: "USER_REGISTER_SUCCESS",
+      userId: newUser._id,
+      userRole: newUser.role,
+      userAgent,
+      details: {
+        email: newUser.email,
+        registrationMethod: "form",
+        assignedRole: newUser.role
+      }
+    });
     
     return NextResponse.json(
       {
@@ -94,16 +174,24 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: unknown) {
     console.error("Registration error:", error);
-
-    // Check if it's a MongoDB duplicate key error
+    await Log.create({
+      logId: crypto.randomUUID(),
+      action: "USER_REGISTER_FAILURE",
+      userId: null,
+      userRole: "anonymous",
+      userAgent,
+      details: {
+        reason: "SERVER_ERROR",
+        error: error instanceof Error ? error.message : "Unknown error",
+        errorStack: error instanceof Error ? error.stack : undefined
+      }
+    });
     if (isMongoError(error) && error.code === 11000) {
       return NextResponse.json(
         { error: "User with this email already exists" },
         { status: 400 }
       );
     }
-
-    // Handle other types of errors
     if (error instanceof Error) {
       return NextResponse.json(
         { error: `Internal server error: ${error.message}` },

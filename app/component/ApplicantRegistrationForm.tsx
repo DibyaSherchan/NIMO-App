@@ -57,7 +57,7 @@ const ApplicantRegistrationForm = () => {
     emergencyContact: "",
     emergencyPhone: "",
     destinationCountry: "",
-    jobPosition: "", // "Working Applied for" from the PDF
+    jobPosition: "",
     medicalHistory: "",
     passportScan: null as File | null,
     medicalReport: null as File | null,

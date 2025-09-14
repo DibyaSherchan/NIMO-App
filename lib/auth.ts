@@ -3,7 +3,18 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import Log from "@/models/Log";
 import bcrypt from "bcryptjs";
+import { v4 as uuidv4 } from "uuid";
+import { NextApiRequest } from "next";
+interface SignInParams {
+  user: any;
+  account: any;
+  profile?: any;
+  email?: any;
+  credentials?: any;
+  req?: NextApiRequest;
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,16 +28,69 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) return null;
+      async authorize(credentials, req) {
+        const userAgent = req?.headers?.['user-agent'] || 'unknown';
+
+        if (!credentials?.email || !credentials.password) {
+          await Log.create({
+            logId: uuidv4(),
+            action: "LOGIN_FAILURE",
+            userRole: "anonymous",
+            userAgent,
+            details: {
+              reason: "MISSING_CREDENTIALS",
+              provider: "credentials"
+            }
+          });
+          return null;
+        }
 
         await connectDB();
-        const user = await User.findOne({ email: credentials.email });
+        const user = await User.findOne({ email: credentials.email.toLowerCase() });
 
-        if (!user || !user.password) return null;
+        if (!user || !user.password) {
+          await Log.create({
+            logId: uuidv4(),
+            action: "LOGIN_FAILURE",
+            userRole: "anonymous",
+            userAgent,
+            details: {
+              reason: "USER_NOT_FOUND",
+              provider: "credentials",
+              attemptedEmail: credentials.email.toLowerCase()
+            }
+          });
+          return null;
+        }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) return null;
+        if (!isValid) {
+          await Log.create({
+            logId: uuidv4(),
+            action: "LOGIN_FAILURE",
+            userId: user._id,
+            userRole: user.role,
+            userAgent,
+            details: {
+              reason: "INVALID_PASSWORD",
+              provider: "credentials",
+              attemptedEmail: credentials.email.toLowerCase()
+            }
+          });
+          return null;
+        }
+
+        await Log.create({
+          logId: uuidv4(),
+          action: "LOGIN_SUCCESS",
+          userId: user._id,
+          userRole: user.role,
+          userAgent,
+          details: {
+            provider: "credentials",
+            method: "direct_login"
+          }
+        });
 
         return {
           id: user._id.toString(),
@@ -41,7 +105,10 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
 
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn(params: SignInParams) {
+      const { user, account, req } = params;
+      const userAgent = req?.headers?.['user-agent'] || 'unknown';
+
       if (account?.provider === "google") {
         try {
           await connectDB();
@@ -53,6 +120,18 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (existingUser) {
+            await Log.create({
+              logId: uuidv4(),
+              action: "LOGIN_SUCCESS",
+              userId: existingUser._id,
+              userRole: existingUser.role,
+              userAgent,
+              details: {
+                provider: "google",
+                method: "existing_account"
+              }
+            });
+            
             existingUser.lastLogin = new Date();
             if (!existingUser.googleId) {
               existingUser.googleId = account.providerAccountId;
@@ -63,11 +142,36 @@ export const authOptions: NextAuthOptions = {
             user.id = existingUser._id.toString();
             return true; 
           } else {
+            await Log.create({
+              logId: uuidv4(),
+              action: "LOGIN_REDIRECT_TO_SIGNUP",
+              userRole: "anonymous",
+              userAgent,
+              details: {
+                provider: "google",
+                reason: "NEW_USER_REDIRECT",
+                email: user.email,
+                name: user.name
+              }
+            });
+            
             return `/auth/signup?google=true&email=${encodeURIComponent(
               user.email!
             )}&name=${encodeURIComponent(user.name!)}`;
           }
         } catch (error) {
+          await Log.create({
+            logId: uuidv4(),
+            action: "LOGIN_FAILURE",
+            userRole: "anonymous",
+            userAgent,
+            details: {
+              provider: "google",
+              reason: "SERVER_ERROR",
+              error: error instanceof Error ? error.message : "Unknown error"
+            }
+          });
+          
           console.error("Error during Google sign in:", error);
           return false;
         }
