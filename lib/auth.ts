@@ -20,6 +20,14 @@ interface SignInParams {
   req?: NextApiRequest;
 }
 
+// Create a type for user with role
+interface UserWithRole {
+  role?: string;
+  id?: string;
+  email?: string | null;
+  name?: string | null;
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
@@ -142,8 +150,10 @@ export const authOptions: NextAuthOptions = {
               existingUser.authProvider = "google";
             }
             await existingUser.save();
-            // Use type assertion for the role property
-            (user as any).role = existingUser.role;
+            
+            // Use a more specific type assertion
+            const userWithRole = user as UserWithRole;
+            userWithRole.role = existingUser.role;
             user.id = existingUser._id.toString();
             return true; 
           } else {
@@ -186,8 +196,9 @@ export const authOptions: NextAuthOptions = {
 
     async jwt({ token, user, account }) {
       if (user) {
-        // Use type assertion for the role property
-        token.role = (user as any).role;
+        // Use a more specific type assertion
+        const userWithRole = user as UserWithRole;
+        token.role = userWithRole.role;
         token.id = user.id;
       }
       if (account?.provider === "google" && !token.role) {
