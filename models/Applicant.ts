@@ -6,8 +6,6 @@ const nanoid = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 10);
 const ENC_SECRET = process.env.ENCRYPTION_SECRET || "default_secret_key_32_characters";
 const ENC_ALGO = "aes-256-cbc";
 const IV_LENGTH = 16;
-
-// NEW ENCRYPTION FUNCTION - USES createCipheriv
 function encrypt(text: string): string {
   if (!text) return "";
   const iv = crypto.randomBytes(IV_LENGTH);
@@ -17,8 +15,6 @@ function encrypt(text: string): string {
   encrypted += cipher.final("hex");
   return iv.toString("hex") + ":" + encrypted;
 }
-
-// NEW DECRYPTION FUNCTION - USES createDecipheriv
 function decrypt(text: string): string {
   if (!text) return "";
   try {
