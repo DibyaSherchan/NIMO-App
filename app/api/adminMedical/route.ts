@@ -12,6 +12,33 @@ interface ReportQuery {
   reportType?: string;
 }
 
+interface ReportDocument {
+  _id: string;
+  reportId: string;
+  applicantId: string;
+  reportType: string;
+  testResults: Record<string, unknown>;
+  doctorRemarks?: string;
+  physicalExamination?: {
+    height?: string;
+    weight?: string;
+    bloodPressure?: string;
+    pulse?: string;
+    temperature?: string;
+  };
+  specialTests?: {
+    chestXRay?: string;
+    ecg?: string;
+    vision?: string;
+    hearing?: string;
+    urineTest?: string;
+    stoolTest?: string;
+    pregnancyTest?: string;
+  };
+  vaccinationStatus?: string;
+  createdAt: Date;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -65,7 +92,7 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean();
+      .lean() as unknown as ReportDocument[];
 
     console.log('Found reports:', reports.length);
 
@@ -167,14 +194,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const applicant = await Applicant.findOne({ applicantId: report.applicantId })
+    const typedReport = report as unknown as ReportDocument;
+
+    const applicant = await Applicant.findOne({ applicantId: typedReport.applicantId })
       .select('firstName lastName email')
-      .lean() as { firstName: string; lastName: string; email: string } | null;
+      .lean() as unknown as { firstName: string; lastName: string; email: string } | null;
 
     return NextResponse.json({
       success: true,
       report: {
-        ...report,
+        ...typedReport,
         applicantName: applicant 
           ? `${applicant.firstName} ${applicant.lastName}`
           : 'Unknown',
