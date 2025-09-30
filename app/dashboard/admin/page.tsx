@@ -17,9 +17,19 @@ import {
   MapPin,
   Download,
   AlertCircle,
-  LogOut
+  LogOut,
 } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+} from "recharts";
 import { signOut } from "next-auth/react";
 import AdminApplicantPage from "@/app/component/AdminApplicantPage";
 import AdminMedicalReportsPage from "@/app/component/AdminMedicalPage";
@@ -48,13 +58,13 @@ const AdminDashboard = () => {
   const [logs, setLogs] = useState<LogData[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedTimeRange, setSelectedTimeRange] = useState('7d');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedAction, setSelectedAction] = useState('all');
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [selectedTimeRange, setSelectedTimeRange] = useState("7d");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedAction, setSelectedAction] = useState("all");
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   useEffect(() => {
-    if (activeTab === 'dashboard') {
+    if (activeTab === "dashboard") {
       fetchLogs();
     }
   }, [selectedTimeRange, activeTab]);
@@ -67,23 +77,17 @@ const AdminDashboard = () => {
       setLogs(data.logs);
       calculateStats(data.logs);
     } catch (error) {
-      console.error('Error fetching logs:', error);
+      console.error("Error fetching logs:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut({ callbackUrl: '/login' });
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
-  };
-
   const calculateStats = (logsData: LogData[]) => {
-    const uniqueUsers = new Set(logsData.filter(log => log.userId).map(log => log.userId)).size;
-    
+    const uniqueUsers = new Set(
+      logsData.filter((log) => log.userId).map((log) => log.userId)
+    ).size;
+
     const actionCounts = logsData.reduce((acc, log) => {
       acc[log.action] = (acc[log.action] || 0) + 1;
       return acc;
@@ -99,11 +103,12 @@ const AdminDashboard = () => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    const roleDistribution = Object.entries(roleCounts)
-      .map(([role, count]) => ({ role, count }));
+    const roleDistribution = Object.entries(roleCounts).map(
+      ([role, count]) => ({ role, count })
+    );
 
     const activityTrend = logsData.reduce((acc, log) => {
-      const date = new Date(log.timestamp).toISOString().split('T')[0];
+      const date = new Date(log.timestamp).toISOString().split("T")[0];
       acc[date] = (acc[date] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -118,15 +123,17 @@ const AdminDashboard = () => {
       topActions,
       roleDistribution,
       recentLogs: logsData.slice(0, 10),
-      activityTrend: trendData
+      activityTrend: trendData,
     });
   };
 
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.userRole.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.logId.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesAction = selectedAction === 'all' || log.action === selectedAction;
+  const filteredLogs = logs.filter((log) => {
+    const matchesSearch =
+      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.userRole.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.logId.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesAction =
+      selectedAction === "all" || log.action === selectedAction;
     return matchesSearch && matchesAction;
   });
 
@@ -136,33 +143,35 @@ const AdminDashboard = () => {
 
   const getActionBadgeColor = (action: string) => {
     const colors = {
-      'login': 'bg-green-100 text-green-800',
-      'logout': 'bg-red-100 text-red-800',
-      'create': 'bg-blue-100 text-blue-800',
-      'update': 'bg-yellow-100 text-yellow-800',
-      'delete': 'bg-red-100 text-red-800',
-      'view': 'bg-gray-100 text-gray-800',
+      login: "bg-green-100 text-green-800",
+      logout: "bg-red-100 text-red-800",
+      create: "bg-blue-100 text-blue-800",
+      update: "bg-yellow-100 text-yellow-800",
+      delete: "bg-red-100 text-red-800",
+      view: "bg-gray-100 text-gray-800",
     };
-    return colors[action as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[action as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
 
   const exportLogs = () => {
     const csvContent = [
-      ['Log ID', 'Action', 'User Role', 'Timestamp', 'Details'],
-      ...filteredLogs.map(log => [
+      ["Log ID", "Action", "User Role", "Timestamp", "Details"],
+      ...filteredLogs.map((log) => [
         log.logId,
         log.action,
         log.userRole,
         formatTimestamp(log.timestamp),
-        JSON.stringify(log.details)
-      ])
-    ].map(row => row.join(',')).join('\n');
+        JSON.stringify(log.details),
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `admin-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `admin-logs-${new Date().toISOString().split("T")[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -170,40 +179,40 @@ const AdminDashboard = () => {
   };
 
   const salesData = [
-    { month: '20k', sales: 20, profit: 15 },
-    { month: '30k', sales: 30, profit: 25 },
-    { month: '40k', sales: 65, profit: 45 },
-    { month: '50k', sales: 45, profit: 35 },
-    { month: '60k', sales: 85, profit: 65 },
-    { month: '70k', sales: 55, profit: 40 },
-    { month: '80k', sales: 75, profit: 55 },
-    { month: '90k', sales: 90, profit: 70 },
-    { month: '100k', sales: 85, profit: 65 }
+    { month: "20k", sales: 20, profit: 15 },
+    { month: "30k", sales: 30, profit: 25 },
+    { month: "40k", sales: 65, profit: 45 },
+    { month: "50k", sales: 45, profit: 35 },
+    { month: "60k", sales: 85, profit: 65 },
+    { month: "70k", sales: 55, profit: 40 },
+    { month: "80k", sales: 75, profit: 55 },
+    { month: "90k", sales: 90, profit: 70 },
+    { month: "100k", sales: 85, profit: 65 },
   ];
 
   const registrationTrend = [
-    { year: '2015', count: 20 },
-    { year: '2016', count: 45 },
-    { year: '2017', count: 65 },
-    { year: '2018', count: 40 },
-    { year: '2019', count: 95 }
+    { year: "2015", count: 20 },
+    { year: "2016", count: 45 },
+    { year: "2017", count: 65 },
+    { year: "2018", count: 40 },
+    { year: "2019", count: 95 },
   ];
 
   const revenueData = [
-    { name: 'Q1', value: 25 },
-    { name: 'Q2', value: 45 },
-    { name: 'Q3', value: 85 },
-    { name: 'Q4', value: 30 }
+    { name: "Q1", value: 25 },
+    { name: "Q2", value: 45 },
+    { name: "Q3", value: 85 },
+    { name: "Q4", value: 30 },
   ];
 
   const sidebarItems = [
-    { id: 'dashboard', label: 'HOME', icon: Home },
-    { id: 'account', label: 'ACCOUNT', icon: Users },
-    { id: 'reports', label: 'REPORTS', icon: FileText },
-    { id: 'alerts', label: 'ALERTS', icon: Bell },
-    { id: 'booking', label: 'BOOKING', icon: Calendar },
-    { id: 'setting', label: 'SETTING', icon: Settings },
-    { id: 'profile', label: 'PROFILE', icon: User }
+    { id: "dashboard", label: "HOME", icon: Home },
+    { id: "account", label: "ACCOUNT", icon: Users },
+    { id: "reports", label: "REPORTS", icon: FileText },
+    { id: "alerts", label: "ALERTS", icon: Bell },
+    { id: "booking", label: "BOOKING", icon: Calendar },
+    { id: "setting", label: "SETTING", icon: Settings },
+    { id: "profile", label: "PROFILE", icon: User },
   ];
 
   const renderSidebar = () => (
@@ -216,7 +225,7 @@ const AdminDashboard = () => {
           <span className="text-xl font-bold text-gray-800">Dashboard</span>
         </div>
       </div>
-      
+
       <nav className="flex-1 px-4 py-6">
         {sidebarItems.map((item) => {
           const Icon = item.icon;
@@ -226,8 +235,8 @@ const AdminDashboard = () => {
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 mb-2 ${
                 activeTab === item.id
-                  ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? "bg-blue-50 text-blue-600 border-r-2 border-blue-600"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >
               <Icon size={18} />
@@ -236,28 +245,26 @@ const AdminDashboard = () => {
           );
         })}
       </nav>
-      <div className="p-4 border-t">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-200"
-        >
-          <LogOut size={18} />
-          <span>LOGOUT</span>
-        </button>
-      </div>
+      <button
+        onClick={() => signOut()}
+        className="flex items-center px-8 py-3 text-gray-700 hover:text-black"
+      >
+        <LogOut size={16} className="mr-2" />
+        Sign Out
+      </button>
     </div>
   );
 
   const renderMainContent = () => {
-    if (activeTab === 'account') {
+    if (activeTab === "account") {
       return <AdminApplicantPage />;
     }
 
-    if (activeTab === 'reports') {
+    if (activeTab === "reports") {
       return <AdminMedicalReportsPage />;
     }
 
-    if (loading && activeTab === 'dashboard') {
+    if (loading && activeTab === "dashboard") {
       return (
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex items-center space-x-2">
@@ -268,12 +275,16 @@ const AdminDashboard = () => {
       );
     }
 
-    if (activeTab !== 'dashboard') {
+    if (activeTab !== "dashboard") {
       return (
         <div className="p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">{sidebarItems.find(item => item.id === activeTab)?.label}</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            {sidebarItems.find((item) => item.id === activeTab)?.label}
+          </h2>
           <div className="bg-white p-8 rounded-xl shadow-sm border">
-            <p className="text-gray-600">This section is under development...</p>
+            <p className="text-gray-600">
+              This section is under development...
+            </p>
           </div>
         </div>
       );
@@ -297,7 +308,10 @@ const AdminDashboard = () => {
               <option value="90d">Last 90 days</option>
             </select>
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <MapPin
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={16}
+              />
               <select className="pl-10 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option>Select Location</option>
                 <option>Japan</option>
@@ -320,7 +334,9 @@ const AdminDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm">Total Logs</p>
-                <p className="text-3xl font-bold text-gray-900">{stats?.totalLogs || 0}</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {stats?.totalLogs || 0}
+                </p>
                 <div className="flex items-center text-green-600 text-sm mt-2">
                   <TrendingUp size={14} className="mr-1" />
                   <span>All time</span>
@@ -336,7 +352,9 @@ const AdminDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm">Unique Users</p>
-                <p className="text-3xl font-bold text-gray-900">{stats?.uniqueUsers || 0}</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {stats?.uniqueUsers || 0}
+                </p>
                 <div className="flex items-center text-blue-600 text-sm mt-2">
                   <Users size={14} className="mr-1" />
                   <span>Active users</span>
@@ -398,20 +416,20 @@ const AdminDashboard = () => {
                   <XAxis dataKey="month" />
                   <YAxis />
                   <Tooltip />
-                  <Area 
-                    type="monotone" 
-                    dataKey="sales" 
+                  <Area
+                    type="monotone"
+                    dataKey="sales"
                     stackId="1"
-                    stroke="#8b5cf6" 
-                    fill="#c4b5fd" 
+                    stroke="#8b5cf6"
+                    fill="#c4b5fd"
                     fillOpacity={0.6}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="profit" 
+                  <Area
+                    type="monotone"
+                    dataKey="profit"
                     stackId="1"
-                    stroke="#f97316" 
-                    fill="#fb923c" 
+                    stroke="#f97316"
+                    fill="#fb923c"
                     fillOpacity={0.6}
                   />
                 </AreaChart>
@@ -431,7 +449,9 @@ const AdminDashboard = () => {
 
           <div className="bg-white p-6 rounded-xl shadow-sm border">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Total Registered Applicants</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Total Registered Applicants
+              </h3>
               <select className="text-sm border border-gray-200 rounded-lg px-3 py-1 focus:outline-none text-black">
                 <option>October</option>
                 <option>November</option>
@@ -445,12 +465,12 @@ const AdminDashboard = () => {
                   <XAxis dataKey="year" />
                   <YAxis />
                   <Tooltip />
-                  <Line 
-                    type="monotone" 
-                    dataKey="count" 
-                    stroke="#3b82f6" 
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke="#3b82f6"
                     strokeWidth={3}
-                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                    dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -462,10 +482,15 @@ const AdminDashboard = () => {
         <div className="bg-white rounded-xl shadow-sm border mb-8">
           <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-              <h3 className="text-lg font-semibold text-gray-900">System Logs</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                System Logs
+              </h3>
               <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                  <Search
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                    size={16}
+                  />
                   <input
                     type="text"
                     placeholder="Search logs..."
@@ -520,12 +545,19 @@ const AdminDashboard = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredLogs.slice(0, 50).map((log) => (
-                  <tr key={log._id} className="hover:bg-gray-50 transition-colors duration-150">
+                  <tr
+                    key={log._id}
+                    className="hover:bg-gray-50 transition-colors duration-150"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {log.logId}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getActionBadgeColor(log.action)}`}>
+                      <span
+                        className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getActionBadgeColor(
+                          log.action
+                        )}`}
+                      >
                         {log.action}
                       </span>
                     </td>
@@ -547,14 +579,17 @@ const AdminDashboard = () => {
           {filteredLogs.length === 0 && (
             <div className="text-center py-12">
               <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500">No logs found matching your criteria.</p>
+              <p className="text-gray-500">
+                No logs found matching your criteria.
+              </p>
             </div>
           )}
 
           {filteredLogs.length > 50 && (
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
               <p className="text-sm text-gray-600">
-                Showing first 50 of {filteredLogs.length} logs. Use filters to narrow down results.
+                Showing first 50 of {filteredLogs.length} logs. Use filters to
+                narrow down results.
               </p>
             </div>
           )}
@@ -576,16 +611,16 @@ const AdminDashboard = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis tickFormatter={(value) => `${value}%`} />
-                <Tooltip 
-                  formatter={(value) => [`${value}%`, 'Revenue']}
+                <Tooltip
+                  formatter={(value) => [`${value}%`, "Revenue"]}
                   labelFormatter={(label) => `Quarter: ${label}`}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#3b82f6" 
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#3b82f6"
                   strokeWidth={2}
-                  dot={{ fill: '#3b82f6', strokeWidth: 2, r: 6 }}
+                  dot={{ fill: "#3b82f6", strokeWidth: 2, r: 6 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -603,9 +638,7 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {renderSidebar()}
-      <div className="flex-1 overflow-hidden">
-        {renderMainContent()}
-      </div>
+      <div className="flex-1 overflow-hidden">{renderMainContent()}</div>
     </div>
   );
 };
