@@ -446,7 +446,7 @@ const AdminMedicalReportsPage = () => {
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Doctor's Remarks</h3>
+                <h3 className="font-semibold text-gray-700 mb-2">Doctor&apos;s Remarks</h3>
                 <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">
                   {selectedReport.doctorRemarks || 'No remarks provided'}
                 </p>
