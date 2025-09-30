@@ -3,18 +3,24 @@ import React, { useState, useEffect } from "react";
 import {
   Users,
   Activity,
-  Globe,
-  LogOut,
   Calendar,
-  Download,
   TrendingUp,
-  AlertCircle,
   Search,
   RefreshCw,
   Settings,
+  Home,
+  FileText,
+  Bell,
+  User,
+  BarChart3,
+  DollarSign,
+  MapPin,
+  Download,
+  AlertCircle
 } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import AdminApplicantPage from "@/app/component/AdminApplicantPage";
+import AdminMedicalReportsPage from "@/app/component/AdminMedicalPage";
 
 interface LogData {
   _id: string;
@@ -85,6 +91,7 @@ const AdminDashboard = () => {
 
     const roleDistribution = Object.entries(roleCounts)
       .map(([role, count]) => ({ role, count }));
+
     const activityTrend = logsData.reduce((acc, log) => {
       const date = new Date(log.timestamp).toISOString().split('T')[0];
       acc[date] = (acc[date] || 0) + 1;
@@ -152,32 +159,96 @@ const AdminDashboard = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Activity },
-    { id: 'applicants', label: 'Applicants', icon: Users },
-    { id: 'settings', label: 'Settings', icon: Settings },
+  const salesData = [
+    { month: '20k', sales: 20, profit: 15 },
+    { month: '30k', sales: 30, profit: 25 },
+    { month: '40k', sales: 65, profit: 45 },
+    { month: '50k', sales: 45, profit: 35 },
+    { month: '60k', sales: 85, profit: 65 },
+    { month: '70k', sales: 55, profit: 40 },
+    { month: '80k', sales: 75, profit: 55 },
+    { month: '90k', sales: 90, profit: 70 },
+    { month: '100k', sales: 85, profit: 65 }
   ];
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'applicants':
-        return <AdminApplicantPage />;
-      case 'settings':
-        return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Settings</h2>
-            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-              <p className="text-gray-600">Settings panel coming soon...</p>
-            </div>
-          </div>
-        );
-      default:
-        return renderDashboardContent();
-    }
-  };
+  const registrationTrend = [
+    { year: '2015', count: 20 },
+    { year: '2016', count: 45 },
+    { year: '2017', count: 65 },
+    { year: '2018', count: 40 },
+    { year: '2019', count: 95 }
+  ];
 
-  const renderDashboardContent = () => {
-    if (loading) {
+  const revenueData = [
+    { name: 'Q1', value: 25 },
+    { name: 'Q2', value: 45 },
+    { name: 'Q3', value: 85 },
+    { name: 'Q4', value: 30 }
+  ];
+
+  const sidebarItems = [
+    { id: 'dashboard', label: 'HOME', icon: Home },
+    { id: 'account', label: 'ACCOUNT', icon: Users },
+    { id: 'reports', label: 'REPORTS', icon: FileText },
+    { id: 'alerts', label: 'ALERTS', icon: Bell },
+    { id: 'booking', label: 'BOOKING', icon: Calendar },
+    { id: 'setting', label: 'SETTING', icon: Settings },
+    { id: 'profile', label: 'PROFILE', icon: User }
+  ];
+
+  const renderSidebar = () => (
+    <div className="w-64 bg-white shadow-lg h-full flex flex-col">
+      <div className="p-6 border-b">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+            <Activity className="text-white" size={20} />
+          </div>
+          <span className="text-xl font-bold text-gray-800">Dashboard</span>
+        </div>
+      </div>
+      
+      <nav className="flex-1 px-4 py-6">
+        {sidebarItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 mb-2 ${
+                activeTab === item.id
+                  ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <Icon size={18} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="p-4 border-t">
+        <div className="text-xs text-gray-500 mb-2">Powered By</div>
+        <div className="flex items-center space-x-2">
+          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+            <Activity className="text-blue-600" size={12} />
+          </div>
+          <span className="text-sm font-medium text-gray-700">NEOLA</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderMainContent = () => {
+    if (activeTab === 'account') {
+      return <AdminApplicantPage />;
+    }
+
+    if (activeTab === 'reports') {
+      return <AdminMedicalReportsPage />;
+    }
+
+    if (loading && activeTab === 'dashboard') {
       return (
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex items-center space-x-2">
@@ -188,72 +259,113 @@ const AdminDashboard = () => {
       );
     }
 
+    if (activeTab !== 'dashboard') {
+      return (
+        <div className="p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">{sidebarItems.find(item => item.id === activeTab)?.label}</h2>
+          <div className="bg-white p-8 rounded-xl shadow-sm border">
+            <p className="text-gray-600">This section is under development...</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <>
+      <div className="p-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          </div>
+          <div className="flex items-center space-x-4">
+            <select
+              value={selectedTimeRange}
+              onChange={(e) => setSelectedTimeRange(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+            >
+              <option value="1d">Last 24 hours</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="90d">Last 90 days</option>
+            </select>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <select className="pl-10 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option>Select Location</option>
+                <option>Japan</option>
+                <option>USA</option>
+                <option>Europe</option>
+              </select>
+            </div>
+            <div className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <span className="text-sm font-semibold">NM</span>
+              </div>
+              <span className="text-sm">Nippon Medical Center</span>
+            </div>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-medium">Total Logs</p>
+                <p className="text-gray-600 text-sm">Total Logs</p>
                 <p className="text-3xl font-bold text-gray-900">{stats?.totalLogs || 0}</p>
-                <p className="text-green-600 text-sm mt-1">
-                  <TrendingUp size={14} className="inline mr-1" />
-                  All time
-                </p>
+                <div className="flex items-center text-green-600 text-sm mt-2">
+                  <TrendingUp size={14} className="mr-1" />
+                  <span>All time</span>
+                </div>
               </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Activity className="text-blue-600" size={28} />
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <Activity className="text-blue-600" size={24} />
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-medium">Unique Users</p>
+                <p className="text-gray-600 text-sm">Unique Users</p>
                 <p className="text-3xl font-bold text-gray-900">{stats?.uniqueUsers || 0}</p>
-                <p className="text-blue-600 text-sm mt-1">
-                  <Users size={14} className="inline mr-1" />
-                  Active users
-                </p>
+                <div className="flex items-center text-blue-600 text-sm mt-2">
+                  <Users size={14} className="mr-1" />
+                  <span>Active users</span>
+                </div>
               </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <Users className="text-green-600" size={28} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">Top Action</p>
-                <p className="text-xl font-bold text-gray-900">{stats?.topActions[0]?.action || 'N/A'}</p>
-                <p className="text-purple-600 text-sm mt-1">
-                  <AlertCircle size={14} className="inline mr-1" />
-                  {stats?.topActions[0]?.count || 0} times
-                </p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-full">
-                <Globe className="text-purple-600" size={28} />
+              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                <Users className="text-yellow-600" size={24} />
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-medium">Data Range</p>
-                <p className="text-xl font-bold text-gray-900">
-                  {selectedTimeRange.replace('d', ' Days')}
-                </p>
-                <p className="text-orange-600 text-sm mt-1">
-                  <Calendar size={14} className="inline mr-1" />
-                  Current period
-                </p>
+                <p className="text-gray-600 text-sm">Total Sales</p>
+                <p className="text-2xl font-bold text-gray-900">89,000</p>
+                <div className="flex items-center text-red-600 text-sm mt-2">
+                  <span>4.3% Down from yesterday</span>
+                </div>
               </div>
-              <div className="p-3 bg-orange-100 rounded-full">
-                <Calendar className="text-orange-600" size={28} />
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <BarChart3 className="text-green-600" size={24} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Total Expense</p>
+                <p className="text-2xl font-bold text-gray-900">50,000</p>
+                <div className="flex items-center text-green-600 text-sm mt-2">
+                  <TrendingUp size={14} className="mr-1" />
+                  <span>1.8% Up from yesterday</span>
+                </div>
+              </div>
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <DollarSign className="text-red-600" size={24} />
               </div>
             </div>
           </div>
@@ -261,55 +373,86 @@ const AdminDashboard = () => {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Actions</h3>
-            <div className="space-y-3">
-              {stats?.topActions.map((item, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-gray-700 font-medium">{item.action}</span>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{
-                          width: `${(item.count / (stats?.topActions[0]?.count || 1)) * 100}%`
-                        }}
-                      />
-                    </div>
-                    <span className="text-sm font-bold text-gray-900 w-8">{item.count}</span>
-                  </div>
-                </div>
-              ))}
+          <div className="bg-white p-6 rounded-xl shadow-sm border">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Sales</h3>
+              <select className="text-sm border border-gray-200 rounded-lg px-3 py-1 focus:outline-none text-black">
+                <option>October</option>
+                <option>November</option>
+                <option>December</option>
+              </select>
+            </div>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={salesData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area 
+                    type="monotone" 
+                    dataKey="sales" 
+                    stackId="1"
+                    stroke="#8b5cf6" 
+                    fill="#c4b5fd" 
+                    fillOpacity={0.6}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="profit" 
+                    stackId="1"
+                    stroke="#f97316" 
+                    fill="#fb923c" 
+                    fillOpacity={0.6}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex justify-center space-x-6 mt-4">
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-purple-400 rounded-full mr-2"></div>
+                <span className="text-sm text-gray-600">Sales</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-orange-400 rounded-full mr-2"></div>
+                <span className="text-sm text-gray-600">Profit</span>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">User Roles Distribution</h3>
-            <div className="space-y-3">
-              {stats?.roleDistribution.map((item, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-gray-700 font-medium capitalize">{item.role}</span>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-green-600 h-2 rounded-full"
-                        style={{
-                          width: `${(item.count / Math.max(...(stats?.roleDistribution.map(r => r.count) || [1]))) * 100}%`
-                        }}
-                      />
-                    </div>
-                    <span className="text-sm font-bold text-gray-900 w-8">{item.count}</span>
-                  </div>
-                </div>
-              ))}
+          <div className="bg-white p-6 rounded-xl shadow-sm border">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Total Registered Applicants</h3>
+              <select className="text-sm border border-gray-200 rounded-lg px-3 py-1 focus:outline-none text-black">
+                <option>October</option>
+                <option>November</option>
+                <option>December</option>
+              </select>
+            </div>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={registrationTrend}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="year" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line 
+                    type="monotone" 
+                    dataKey="count" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3}
+                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
 
-        {/* Logs Table Section */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200">
+        {/* System Logs Table */}
+        <div className="bg-white rounded-xl shadow-sm border mb-8">
           <div className="p-6 border-b border-gray-200">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 text-black">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
               <h3 className="text-lg font-semibold text-gray-900">System Logs</h3>
               <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
                 <div className="relative">
@@ -319,13 +462,13 @@ const AdminDashboard = () => {
                     placeholder="Search logs..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-64"
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-64 text-black"
                   />
                 </div>
                 <select
                   value={selectedAction}
                   onChange={(e) => setSelectedAction(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                 >
                   <option value="all">All Actions</option>
                   {stats?.topActions.map((action) => (
@@ -407,71 +550,52 @@ const AdminDashboard = () => {
             </div>
           )}
         </div>
-      </>
+
+        {/* Revenue Chart */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Revenue</h3>
+            <select className="text-sm border border-gray-200 rounded-lg px-3 py-1 focus:outline-none text-black">
+              <option>October</option>
+              <option>November</option>
+              <option>December</option>
+            </select>
+          </div>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={revenueData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis tickFormatter={(value) => `${value}%`} />
+                <Tooltip 
+                  formatter={(value) => [`${value}%`, 'Revenue']}
+                  labelFormatter={(label) => `Quarter: ${label}`}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#3b82f6" 
+                  strokeWidth={2}
+                  dot={{ fill: '#3b82f6', strokeWidth: 2, r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-4">
+            <div className="bg-blue-600 text-white px-3 py-1 rounded text-sm inline-block">
+              64,966.77
+            </div>
+          </div>
+        </div>
+      </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600 mt-1">Monitor system activity and manage applications</p>
-            </div>
-            <div className="flex items-center space-x-4 text-black">
-              {activeTab === 'dashboard' && (
-                <select
-                  value={selectedTimeRange}
-                  onChange={(e) => setSelectedTimeRange(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="1d">Last 24 hours</option>
-                  <option value="7d">Last 7 days</option>
-                  <option value="30d">Last 30 days</option>
-                  <option value="90d">Last 90 days</option>
-                </select>
-              )}
-              <button
-                onClick={() => signOut()}
-                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-md"
-              >
-                <LogOut size={16} className="mr-2" />
-                Sign Out
-              </button>
-            </div>
-          </div>
-
-          {/* Navigation Tabs */}
-          <div className="mt-6">
-            <nav className="flex space-x-1">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                      activeTab === tab.id
-                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Icon size={16} className="mr-2" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="p-6">
-        {renderTabContent()}
+    <div className="min-h-screen bg-gray-50 flex">
+      {renderSidebar()}
+      <div className="flex-1 overflow-hidden">
+        {renderMainContent()}
       </div>
     </div>
   );

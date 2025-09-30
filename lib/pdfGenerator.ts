@@ -113,8 +113,6 @@ export const generateMedicalReportPDF = async (
   doc.rect(95, currentY - 2, 20, 4, "F");
   doc.setFont("helvetica", "bold");
   doc.text("FIT", 105, currentY + 1, { align: "center" });
-
-  // === APPLICANT INFO TABLE ===
   currentY += 8;
   autoTable(doc, {
     startY: currentY,
@@ -161,8 +159,6 @@ export const generateMedicalReportPDF = async (
       ["", "", "Nationality", formData.nationality || "NEPALI", ""],
     ],
   });
-
-  // === GENERAL EXAMINATION ===
   currentY = (doc.lastAutoTable?.finalY || 0) + 3;
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
@@ -182,8 +178,6 @@ export const generateMedicalReportPDF = async (
   );
   currentY += 3;
   doc.text("2. Past history of allergy None", 12, currentY);
-
-  // Physical measurements table
   currentY += 5;
   autoTable(doc, {
     startY: currentY,
@@ -248,22 +242,16 @@ export const generateMedicalReportPDF = async (
       ],
     ],
   });
-
-  // === SYSTEMIC & LABORATORY EXAMINATION ===
   currentY = (doc.lastAutoTable?.finalY || 0) + 3;
   const leftColumnX = 12;
   const rightColumnX = 110;
   const columnWidth = 90;
-
-  // Left column
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setFillColor(64, 64, 64);
   doc.rect(leftColumnX, currentY - 2, columnWidth, 4, "F");
   doc.setTextColor(255, 255, 255);
   doc.text("SYSTEMIC EXAMINATION", leftColumnX + 2, currentY + 1);
-
-  // Right column
   doc.rect(rightColumnX, currentY - 2, columnWidth, 4, "F");
   doc.text("LABORATORY EXAMINATION", rightColumnX + 2, currentY + 1);
   doc.setTextColor(0, 0, 0);
@@ -361,8 +349,6 @@ export const generateMedicalReportPDF = async (
     ["", "Cannabis", "Negative", ""],
     ["", "Mantoux Test", "Negative", ""],
   ];
-
-  // Systemic exam rendering
   let yPos = currentY;
   systemicExams.forEach((row, index) => {
     doc.setFont("helvetica", index === 0 ? "bold" : "normal");
@@ -370,8 +356,6 @@ export const generateMedicalReportPDF = async (
     doc.text(row[1], leftColumnX + 45, yPos);
     yPos += 3.5;
   });
-
-  // Lab exam rendering
   yPos = currentY;
   labExams.forEach((row, index) => {
     doc.setFont(
@@ -396,8 +380,6 @@ export const generateMedicalReportPDF = async (
     }
     yPos += 2.8;
   });
-
-  // === CERTIFICATION ===
   currentY = 220;
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
@@ -412,8 +394,6 @@ export const generateMedicalReportPDF = async (
     currentY,
     { maxWidth: 180 }
   );
-
-  // === SIGNATURE BLOCK ===
   currentY += 15;
   doc.setFont("helvetica", "bold");
   doc.text(`*${formData.physicianName || "DR. ANUJ SHRESTHA"}`, 12, currentY);
@@ -424,8 +404,6 @@ export const generateMedicalReportPDF = async (
   doc.setFontSize(6);
   doc.text("(Name of Health Care Organization)", 12, currentY);
   doc.text("(Stamp & Signature of Physician)", 12, currentY + 3);
-
-  // Right side signature
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.text("Bishow Sherchan", 150, currentY - 8);
@@ -434,8 +412,6 @@ export const generateMedicalReportPDF = async (
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6);
   doc.text("Lab Technician", 150, currentY - 2);
-
-  // === VALIDITY NOTE ===
   currentY += 10;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6);
@@ -444,11 +420,7 @@ export const generateMedicalReportPDF = async (
     12,
     currentY
   );
-
-  // Government registration number
   doc.text("Gov. Reg. No. 69847 066/067", 160, 12);
-
-  // === QR CODE ===
   const verifyUrl = `https://localhost:3000/verify/${
     formData.reportId || "sample-id"
   }`;
@@ -456,8 +428,6 @@ export const generateMedicalReportPDF = async (
   doc.addImage(qrDataUrl, "PNG", 14, 260, 30, 30);
   doc.setFontSize(6);
   doc.text("Scan to verify", 14, 293);
-
-  // Save file
   const pdfBlob = doc.output("blob");
   return pdfBlob;
 };

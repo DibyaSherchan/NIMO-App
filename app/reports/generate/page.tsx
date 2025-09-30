@@ -12,7 +12,7 @@ interface LabResult {
 
 interface ReportFormData {
   name: string;
-  age: string; // Changed to string
+  age: string;
   sex: string;
   maritalStatus: string;
   passportNo: string;
@@ -65,7 +65,6 @@ interface Applicant {
   status: string;
 }
 
-// Separate component that uses useSearchParams
 const GenerateReportContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -82,7 +81,7 @@ const GenerateReportContent = () => {
   
   const [formData, setFormData] = useState<ReportFormData>({
     name: "",
-    age: "0", // Changed from 0 to "0"
+    age: "0",
     sex: "Male",
     maritalStatus: "Single",
     passportNo: "",
@@ -194,12 +193,11 @@ const GenerateReportContent = () => {
     const birthDate = new Date(applicant.dateOfBirth);
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
-    
-    // Pre-fill form with applicant data
+
     setFormData(prev => ({
       ...prev,
       name: `${applicant.firstName} ${applicant.lastName}`,
-      age: age.toString(), // Convert number to string
+      age: age.toString(),
       sex: applicant.gender,
       passportNo: applicant.passportNumber,
       passportExpiry: applicant.passportExpiry.split('T')[0],
@@ -268,16 +266,11 @@ const GenerateReportContent = () => {
 
     setSaving(true);
     try {
-      // Generate PDF first
       const pdfBlob = await generateMedicalReportPDF(formData);
-      
-      // Convert blob to base64 for storage
       const reader = new FileReader();
       reader.readAsDataURL(pdfBlob);
       reader.onloadend = async () => {
         const base64data = reader.result as string;
-        
-        // Save to MongoDB
         const response = await fetch("/api/reports/save", {
           method: "POST",
           headers: {
@@ -293,8 +286,6 @@ const GenerateReportContent = () => {
           const result = await response.json();
           alert("Report saved successfully!");
           console.log("Saved report ID:", result.reportId);
-          
-          // Create a URL for the generated PDF
           const pdfUrl = URL.createObjectURL(pdfBlob);
           setGeneratedPdfUrl(pdfUrl);
         } else {

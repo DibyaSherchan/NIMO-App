@@ -50,7 +50,7 @@ const MedicalReportSchema: Schema = new Schema({
     pregnancyTest: String,
   },
   vaccinationStatus: String,
-  pdfData: String, // Store PDF as base64 string
+  pdfData: String, 
   createdAt: { type: Date, default: Date.now },
 });
 

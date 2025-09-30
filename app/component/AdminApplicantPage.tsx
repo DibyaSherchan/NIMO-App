@@ -70,7 +70,6 @@ const AdminApplicantPage = () => {
   const [stats, setStats] = useState<StatsInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Debounce search term
   useEffect(() => {
     const timeout = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -79,12 +78,10 @@ const AdminApplicantPage = () => {
     return () => clearTimeout(timeout);
   }, [searchTerm]);
 
-  // Reset to first page when search or filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchTerm, statusFilter]);
 
-  // Fetch applicants when dependencies change
   useEffect(() => {
     fetchApplicants();
   }, [debouncedSearchTerm, statusFilter, currentPage]);
@@ -151,11 +148,8 @@ const AdminApplicantPage = () => {
     }
   }, [debouncedSearchTerm, statusFilter, currentPage]);
 
-  // Client-side filtering (for immediate feedback while typing)
   const filteredApplicants = React.useMemo(() => {
     let result = applicants;
-
-    // Only apply client-side filtering if we're still typing (searchTerm !== debouncedSearchTerm)
     if (searchTerm !== debouncedSearchTerm && searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(
@@ -644,7 +638,7 @@ const AdminApplicantPage = () => {
                 Passport: {editingApplicant.passportNumber}
               </p>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 text-black">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Status

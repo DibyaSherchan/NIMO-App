@@ -8,18 +8,13 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.json();
     const { applicantId, pdfData, ...reportData } = formData;
-
-    // Generate a unique report ID
     const reportId = `MED${Date.now()}${Math.random().toString(36).substr(2, 5)}`.toUpperCase();
-
-    // Create new medical report
     const medicalReport = new MedicalReport({
       reportId,
       applicantId,
       reportType: "Medical Examination",
       testResults: reportData.labResults,
       doctorRemarks: reportData.clinicalImpression,
-      // Add additional fields
       physicalExamination: {
         height: reportData.height,
         weight: reportData.weight,
@@ -37,7 +32,7 @@ export async function POST(req: NextRequest) {
         pregnancyTest: reportData.pregnancyTest
       },
       vaccinationStatus: reportData.vaccinationStatus,
-      pdfData: pdfData, // Store the PDF as base64
+      pdfData: pdfData,
       createdAt: new Date(),
     });
 

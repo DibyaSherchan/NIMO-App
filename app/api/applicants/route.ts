@@ -3,8 +3,6 @@ import { connectDB } from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
 import Log from "@/models/Log";
 import { v4 as uuidv4 } from "uuid";
-
-// Create new applicant
 export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || 'unknown';
 
@@ -12,8 +10,6 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const formData = await request.formData();
-
-    // Basic applicant information
     const applicantData = {
       applicantId: `APP-${uuidv4().substring(0, 8).toUpperCase()}`,
       firstName: formData.get("firstName") as string,
@@ -78,8 +74,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-// Retrieve applicants (for Medical Dashboard)
 export async function GET(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || 'unknown';
 

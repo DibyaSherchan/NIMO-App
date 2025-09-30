@@ -14,8 +14,6 @@ import {
 
 const MIN_WIDTH = 600;
 const MIN_HEIGHT = 600;
-
-// Common destination countries for foreign employment
 const DESTINATION_COUNTRIES = [
   "UAE",
   "Qatar",
@@ -50,7 +48,7 @@ const ApplicantRegistrationForm = () => {
     passportExpiry: "",
     passportIssuePlace: "",
     dateOfBirth: "",
-    nationality: "Nepali", // Default as most applicants will be Nepali
+    nationality: "Nepali", 
     gender: "",
     maritalStatus: "",
     address: "",
@@ -90,7 +88,7 @@ const ApplicantRegistrationForm = () => {
 
   const checkImageResolution = (file: File): Promise<boolean> => {
     return new Promise((resolve) => {
-      if (!file.type.startsWith("image/")) return resolve(true); // skip non-images
+      if (!file.type.startsWith("image/")) return resolve(true); 
 
       const img = new Image();
       img.onload = () => {
@@ -147,8 +145,6 @@ const ApplicantRegistrationForm = () => {
     if (formData.emergencyPhone && !phoneRegex.test(formData.emergencyPhone)) {
       newErrors.emergencyPhone = "Invalid emergency phone number format";
     }
-
-    // File validation
     const validTypes = ["image/jpeg", "image/png", "application/pdf"];
     const filesToCheck: Array<[string, File | null]> = [
       ["passportScan", formData.passportScan],
@@ -175,7 +171,6 @@ const ApplicantRegistrationForm = () => {
       }
     }
 
-    // Passport scan is mandatory
     if (!formData.passportScan) {
       newErrors.passportScan = "Passport scan is required";
     }
@@ -269,7 +264,6 @@ const ApplicantRegistrationForm = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Personal Information */}
         <div className="border-b pb-4">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <User size={18} className="mr-2" />
