@@ -16,9 +16,11 @@ import {
   DollarSign,
   MapPin,
   Download,
-  AlertCircle
+  AlertCircle,
+  LogOut
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { signOut } from "next-auth/react";
 import AdminApplicantPage from "@/app/component/AdminApplicantPage";
 import AdminMedicalReportsPage from "@/app/component/AdminMedicalPage";
 
@@ -68,6 +70,14 @@ const AdminDashboard = () => {
       console.error('Error fetching logs:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut({ callbackUrl: '/login' });
+    } catch (error) {
+      console.error('Error logging out:', error);
     }
   };
 
@@ -226,15 +236,14 @@ const AdminDashboard = () => {
           );
         })}
       </nav>
-
       <div className="p-4 border-t">
-        <div className="text-xs text-gray-500 mb-2">Powered By</div>
-        <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-            <Activity className="text-blue-600" size={12} />
-          </div>
-          <span className="text-sm font-medium text-gray-700">NEOLA</span>
-        </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-200"
+        >
+          <LogOut size={18} />
+          <span>LOGOUT</span>
+        </button>
       </div>
     </div>
   );
