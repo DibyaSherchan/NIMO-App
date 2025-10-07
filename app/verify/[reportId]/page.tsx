@@ -163,7 +163,7 @@ export default function VerifyReport() {
             Verify PDF Document
           </h2>
           <p className="text-gray-600 mb-6">
-            Upload the PDF file to verify its authenticity and ensure it hasn't been tampered with.
+            Upload the PDF file to verify its authenticity and ensure it hasn&apos;t been tampered with.
           </p>
 
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
