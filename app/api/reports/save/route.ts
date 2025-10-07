@@ -9,10 +9,24 @@ export async function POST(req: NextRequest) {
     const formData = await req.json();
     const { applicantId, pdfData, ...reportData } = formData;
     const reportId = `MED${Date.now()}${Math.random().toString(36).substr(2, 5)}`.toUpperCase();
+    
     const medicalReport = new MedicalReport({
       reportId,
       applicantId,
       reportType: "Medical Examination",
+      
+      // Add these fields for QR verification
+      name: reportData.name,
+      age: reportData.age,
+      sex: reportData.sex,
+      passportNo: reportData.passportNo,
+      passportExpiry: reportData.passportExpiry,
+      examinationDate: reportData.examinationDate,
+      destination: reportData.destination,
+      nationality: reportData.nationality,
+      physicianName: reportData.physicianName,
+      physicianLicense: reportData.physicianLicense,
+      
       testResults: reportData.labResults,
       doctorRemarks: reportData.clinicalImpression,
       physicalExamination: {
@@ -33,6 +47,7 @@ export async function POST(req: NextRequest) {
       },
       vaccinationStatus: reportData.vaccinationStatus,
       pdfData: pdfData,
+      status: "approved",
       createdAt: new Date(),
     });
 

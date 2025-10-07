@@ -4,6 +4,17 @@ export interface IMedicalReport extends Document {
   reportId: string;
   applicantId: string;
   reportType: string;
+  name: string;
+  age?: string;
+  sex?: string;
+  passportNo: string;
+  passportExpiry?: string;
+  examinationDate: string;
+  destination: string;
+  nationality?: string;
+  physicianName: string;
+  physicianLicense?: string;
+  status: string;
   testResults: Record<string, any>;
   doctorRemarks: string;
   physicalExamination: {
@@ -31,6 +42,17 @@ const MedicalReportSchema: Schema = new Schema({
   reportId: { type: String, required: true, unique: true, index: true },
   applicantId: { type: String, required: true },
   reportType: { type: String, required: true },
+  name: { type: String, required: true },
+  age: { type: String },
+  sex: { type: String },
+  passportNo: { type: String, required: true },
+  passportExpiry: { type: String },
+  examinationDate: { type: String, required: true },
+  destination: { type: String, required: true },
+  nationality: { type: String },
+  physicianName: { type: String, required: true },
+  physicianLicense: { type: String },
+  status: { type: String, default: "approved" },
   testResults: { type: Map, of: Schema.Types.Mixed },
   doctorRemarks: { type: String },
   physicalExamination: {

@@ -6,6 +6,7 @@ const nanoid = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 10);
 const ENC_SECRET = process.env.ENCRYPTION_SECRET || "default_secret_key_32_characters";
 const ENC_ALGO = "aes-256-cbc";
 const IV_LENGTH = 16;
+
 function encrypt(text: string): string {
   if (!text) return "";
   const iv = crypto.randomBytes(IV_LENGTH);
@@ -15,6 +16,7 @@ function encrypt(text: string): string {
   encrypted += cipher.final("hex");
   return iv.toString("hex") + ":" + encrypted;
 }
+
 function decrypt(text: string): string {
   if (!text) return "";
   try {
@@ -55,6 +57,7 @@ export interface IApplicant extends Document {
   passportScan: string;
   medicalReport: string;
   status: string;
+  rejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -112,6 +115,10 @@ const ApplicantSchema: Schema<IApplicant> = new Schema(
       type: String,
       default: "pending",
       enum: ["pending", "under_review", "verified", "approved", "rejected"],
+    },
+    rejectionReason: {
+      type: String,
+      default: "",
     },
   },
   {

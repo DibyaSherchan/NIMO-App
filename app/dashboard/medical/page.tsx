@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { FileText, LogOut } from "lucide-react";
+import { FileText, LogOut, X, AlertCircle, CheckCircle, Clock, Filter } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 
@@ -20,6 +20,7 @@ interface Applicant {
   medicalReport?: string;
   biometricData?: string;
   status: string;
+  rejectionReason?: string;
   createdAt: string;
 }
 
@@ -54,66 +55,11 @@ interface ReportFormData {
 const MedicalDashboard = () => {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(
-    null
-  );
-  const [formData, setFormData] = useState<ReportFormData>({
-    name: "",
-    age: 0,
-    sex: "Male",
-    maritalStatus: "Single",
-    passportNo: "",
-    passportExpiry: "",
-    passportIssuePlace: "NEPAL",
-    examinationDate: new Date().toISOString().split("T")[0],
-    destination: "",
-    nationality: "",
-    height: "",
-    weight: "",
-    pulse: "",
-    temperature: "",
-    bloodPressure: "",
-    clinicalImpression: "Normal",
-    labResults: {
-      "Total WBC Count": {
-        result: "6,700",
-        reference: "4000-11700",
-        unit: "/cmm",
-      },
-      Neutrophils: { result: "66", reference: "43-19%", unit: "%" },
-      Lymphocytes: { result: "27", reference: "32-40%", unit: "%" },
-      Eosinophils: { result: "03", reference: "17-05%", unit: "%" },
-      Monocytes: { result: "04", reference: "01-9%", unit: "%" },
-      Basophils: { result: "00", reference: "0-5%", unit: "%" },
-      ESR: { result: "10", reference: "M <10.5 <20°", unit: "mm/hr" },
-      Hemoglobin: {
-        result: "12.6",
-        reference: "M 10/Lymph/ 14/Lymph",
-        unit: "g/dL",
-      },
-      "Random Blood Sugar": {
-        result: "102",
-        reference: "60-140",
-        unit: "mg/dL",
-      },
-      Urea: { result: "25", reference: "20-45", unit: "mg/dL" },
-      Creatinine: { result: "1.0", reference: "0.4-1.4", unit: "mg/dL" },
-      "Bilirubin (Total/Direct)": {
-        result: "0.9/0.3",
-        reference: "0.4-1.2 mg/kg (2.7/<0.6)",
-      },
-      SCPT: { result: "29", reference: "Vps=80 UL", unit: "U/L" },
-      SCOT: { result: "27", reference: "Yp>0.0 UL", unit: "U/L" },
-      "Anti-HIV (1&2)": { result: "Non Reactive", reference: "" },
-      HBsAg: { result: "Negative", reference: "" },
-      "Anti-HCV": { result: "Negative", reference: "" },
-      "VDIL/RPR": { result: "Non Reactive", reference: "" },
-      TPHA: { result: "Non Reactive", reference: "" },
-      "ABO-Blood Group & Rh-type": { result: "B+yc", reference: "" },
-    },
-    physicianName: "DR. ANUJ SHRESTHA",
-    physicianLicense: "NMC NO.17681",
-  });
+  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchApplicants = async () => {
@@ -130,22 +76,44 @@ const MedicalDashboard = () => {
     fetchApplicants();
   }, []);
 
-  const rejectApplicant = async (applicantId: string) => {
-    if (!confirm("Are you sure you want to reject this applicant?")) return;
+  const openRejectModal = (applicant: Applicant) => {
+    setSelectedApplicant(applicant);
+    setShowRejectModal(true);
+    setRejectionReason("");
+  };
+
+  const closeRejectModal = () => {
+    setShowRejectModal(false);
+    setSelectedApplicant(null);
+    setRejectionReason("");
+  };
+
+  const rejectApplicant = async () => {
+    if (!selectedApplicant) return;
+    
+    if (!rejectionReason.trim()) {
+      alert("Please provide a reason for rejection");
+      return;
+    }
 
     try {
-      await fetch(`/api/applicants/${applicantId}`, {
+      await fetch(`/api/applicants/${selectedApplicant._id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: "rejected" }),
+        body: JSON.stringify({ 
+          status: "rejected",
+          rejectionReason: rejectionReason.trim()
+        }),
       });
 
       // Refresh applicants list
       const updatedRes = await fetch("/api/applicants");
       const data = await updatedRes.json();
       setApplicants(data);
+      
+      closeRejectModal();
       alert("Applicant rejected successfully");
     } catch (error) {
       console.error("Error rejecting applicant:", error);
@@ -167,196 +135,219 @@ const MedicalDashboard = () => {
     }
   };
 
-  const validateForm = () => {
-    const requiredFields = [
-      "name",
-      "age",
-      "passportNo",
-      "passportExpiry",
-      "examinationDate",
-      "destination",
-      "nationality",
-      "height",
-      "weight",
-      "bloodPressure",
-    ];
-
-    for (const field of requiredFields) {
-      if (!formData[field as keyof ReportFormData]) {
-        alert(`Please fill in the ${field} field`);
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  const generateReport = async () => {
-    if (!selectedApplicant) return;
-
-    try {
-      const response = await fetch("/api/reports/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          applicantId: selectedApplicant.applicantId,
-        }),
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const fileUrl = URL.createObjectURL(blob);
-        const contentDisposition = response.headers.get("content-disposition");
-        let reportId = new Date().getTime().toString();
-
-        if (contentDisposition) {
-          const filenameMatch = contentDisposition.match(
-            /filename="medical-report-(.+)\.pdf"/
-          );
-          if (filenameMatch && filenameMatch[1]) {
-            reportId = filenameMatch[1];
-          }
-        }
-
-        // Refresh applicants list
-        const res = await fetch("/api/applicants");
-        const data = await res.json();
-        setApplicants(data);
-      } else {
-        const error = await response.json();
-        alert("Failed to generate report: " + error.error);
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Failed to generate report");
-    }
-  };
+  const filteredApplicants = applicants
+    .filter(a => a.status !== "rejected")
+    .filter(a => filterStatus === "all" || a.status === filterStatus)
+    .filter(a => 
+      searchQuery === "" || 
+      `${a.firstName} ${a.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      a.applicantId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      a.passportNumber.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   const pendingCount = applicants.filter((a) => a.status === "pending").length;
+  const underReviewCount = applicants.filter((a) => a.status === "under_review").length;
+  const approvedCount = applicants.filter((a) => a.status === "approved").length;
+  const rejectedCount = applicants.filter((a) => a.status === "rejected").length;
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "approved":
+        return <CheckCircle size={16} className="text-green-600" />;
+      case "under_review":
+        return <Clock size={16} className="text-yellow-600" />;
+      case "pending":
+        return <Clock size={16} className="text-blue-600" />;
+      default:
+        return <AlertCircle size={16} className="text-gray-600" />;
+    }
+  };
 
   return (
-    <div className="p-6 mx-auto min-h-screen bg-gray-100 text-black">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Medical Organization Dashboard</h1>
+    <div className="p-6 mx-auto min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Medical Dashboard</h1>
+          <p className="text-gray-600 mt-1">Manage applicant medical reviews</p>
+        </div>
         <button
           onClick={() => signOut()}
-          className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-200"
+          className="flex items-center px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg"
         >
-          <LogOut size={16} className="mr-2" />
+          <LogOut size={18} className="mr-2" />
           Sign Out
         </button>
       </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500 hover:shadow-lg transition-shadow duration-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">Total Applicants</p>
+              <p className="text-3xl font-bold text-gray-800 mt-1">{applicants.length}</p>
+            </div>
+            <div className="bg-blue-100 p-3 rounded-lg">
+              <FileText className="text-blue-600" size={24} />
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-yellow-500 hover:shadow-lg transition-shadow duration-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">Pending</p>
+              <p className="text-3xl font-bold text-gray-800 mt-1">{pendingCount}</p>
+            </div>
+            <div className="bg-yellow-100 p-3 rounded-lg">
+              <Clock className="text-yellow-600" size={24} />
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500 hover:shadow-lg transition-shadow duration-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">Approved</p>
+              <p className="text-3xl font-bold text-gray-800 mt-1">{approvedCount}</p>
+            </div>
+            <div className="bg-green-100 p-3 rounded-lg">
+              <CheckCircle className="text-green-600" size={24} />
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-red-500 hover:shadow-lg transition-shadow duration-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">Rejected</p>
+              <p className="text-3xl font-bold text-gray-800 mt-1">{rejectedCount}</p>
+            </div>
+            <div className="bg-red-100 p-3 rounded-lg">
+              <AlertCircle className="text-red-600" size={24} />
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg border">
-          <p className="text-gray-600">Total Applicants</p>
-          <p className="text-2xl font-bold">{applicants.length}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg border">
-          <p className="text-gray-600">Pending Tests</p>
-          <p className="text-2xl font-bold">{pendingCount}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg border">
-          <p className="text-gray-600">Approved</p>
-          <p className="text-2xl font-bold">
-            {applicants.filter((a) => a.status === "approved").length}
-          </p>
-        </div>
-        <div className="bg-white p-4 rounded-lg border">
-          <p className="text-gray-600">Rejected</p>
-          <p className="text-2xl font-bold">
-            {applicants.filter((a) => a.status === "rejected").length}
-          </p>
+      <div className="bg-white rounded-xl shadow-md p-5 mb-6 ">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search by name, ID, or passport number..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2.5 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter size={20} className="text-gray-600" />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2.5 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="under_review">Under Review</option>
+              <option value="approved">Approved</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Applicant Table */}
-      <div className="bg-white rounded-lg border">
-        <div className="p-4 border-b">
-          <h3 className="font-bold">Applicants</h3>
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+          <h3 className="font-bold text-lg text-gray-800">Applicants List</h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Showing {filteredApplicants.length} of {applicants.filter(a => a.status !== "rejected").length} applicants
+          </p>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
-            <p className="p-4">Loading applicants...</p>
+            <div className="p-12 text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-gray-600">Loading applicants...</p>
+            </div>
+          ) : filteredApplicants.length === 0 ? (
+            <div className="p-12 text-center">
+              <AlertCircle size={48} className="mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-600">No applicants found</p>
+            </div>
           ) : (
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-2 text-left">Applicant ID</th>
-                  <th className="px-4 py-2 text-left">Name</th>
-                  <th className="px-4 py-2 text-left">Passport No</th>
-                  <th className="px-4 py-2 text-left">Destination</th>
-                  <th className="px-4 py-2 text-left">Status</th>
-                  <th className="px-4 py-2 text-left">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Applicant ID</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Passport No</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Destination</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {applicants.map((a) => (
-                  <tr key={a._id} className="border-b">
-                    <td className="px-4 py-2">{a.applicantId}</td>
-                    <td className="px-4 py-2">
-                      {a.firstName} {a.lastName}
+              <tbody className="divide-y divide-gray-200">
+                {filteredApplicants.map((a) => (
+                  <tr key={a._id} className="hover:bg-gray-50 transition-colors duration-150">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm font-medium text-gray-900">{a.applicantId}</span>
                     </td>
-                    <td className="px-4 py-2">{a.passportNumber}</td>
-                    <td className="px-4 py-2">{a.destinationCountry}</td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`px-2 py-1 rounded text-xs ${
-                          a.status === "approved"
-                            ? "bg-green-100 text-green-800"
-                            : a.status === "under_review"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : a.status === "pending"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {a.status.replace("_", " ").toUpperCase()}
-                      </span>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{a.firstName} {a.lastName}</div>
+                      <div className="text-sm text-gray-500">{a.nationality}</div>
                     </td>
-                    <td className="px-4 py-2">
-                      <div className="flex flex-col space-y-2">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{a.passportNumber}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{a.destinationCountry}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(a.status)}
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            a.status === "approved"
+                              ? "bg-green-100 text-green-800"
+                              : a.status === "under_review"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : a.status === "pending"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {a.status.replace("_", " ").toUpperCase()}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex gap-2">
                         <Link
                           href={`/reports/generate?applicantId=${a.applicantId}`}
-                          className={`flex items-center px-3 py-1 rounded-md transition duration-200 ${
-                            a.status === "under_review" ||
-                            a.status === "approved" ||
-                            a.status === "rejected"
-                              ? "bg-gray-400 text-white cursor-not-allowed"
-                              : "bg-blue-600 text-white hover:bg-blue-700"
+                          className={`flex items-center px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
+                            a.status === "approved" || a.status === "rejected"
+                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md"
                           }`}
                           onClick={(e) => {
-                            if (
-                              a.status === "under_review" ||
-                              a.status === "approved" ||
-                              a.status === "rejected"
-                            ) {
+                            if (a.status === "approved" || a.status === "rejected") {
                               e.preventDefault();
-                            } else {
+                            } else if (a.status === "pending") {
                               updateApplicantStatus(a._id, "under_review");
                             }
                           }}
                         >
-                          <FileText size={14} className="mr-1" />
-                          Generate Report
+                          <FileText size={16} className="mr-2" />
+                          Generate
                         </Link>
 
-                        {/* Reject Button */}
                         <button
-                          onClick={() => rejectApplicant(a._id)}
-                          disabled={
+                          onClick={() => openRejectModal(a)}
+                          disabled={a.status === "rejected" || a.status === "approved"}
+                          className={`flex items-center px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
                             a.status === "rejected" || a.status === "approved"
-                          }
-                          className={`flex items-center px-3 py-1 rounded-md transition duration-200 ${
-                            a.status === "rejected" || a.status === "approved"
-                              ? "bg-gray-400 text-white cursor-not-allowed"
-                              : "bg-red-600 text-white hover:bg-red-700"
+                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              : "bg-red-600 text-white hover:bg-red-700 shadow-sm hover:shadow-md"
                           }`}
                         >
+                          <X size={16} className="mr-2" />
                           Reject
                         </button>
 
@@ -364,7 +355,8 @@ const MedicalDashboard = () => {
                           <a
                             href={`/api/reports/generate?reportId=${a.medicalReport}`}
                             target="_blank"
-                            className="text-purple-600 hover:underline text-sm"
+                            rel="noopener noreferrer"
+                            className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 shadow-sm hover:shadow-md text-sm font-medium"
                           >
                             View Report
                           </a>
@@ -378,6 +370,65 @@ const MedicalDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Rejection Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-fadeIn">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Reject Applicant</h3>
+              <button
+                onClick={closeRejectModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-600 mb-2">
+                Applicant: <span className="font-semibold text-gray-900">
+                  {selectedApplicant?.firstName} {selectedApplicant?.lastName}
+                </span>
+              </p>
+              <p className="text-gray-600 mb-4">
+                ID: <span className="font-semibold text-gray-900">{selectedApplicant?.applicantId}</span>
+              </p>
+              
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reason for Rejection <span className="text-red-600">*</span>
+              </label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Please provide a detailed reason for rejection..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none transition-all duration-200"
+                rows={4}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={closeRejectModal}
+                className="flex-1 px-4 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-all duration-200 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={rejectApplicant}
+                disabled={!rejectionReason.trim()}
+                className={`flex-1 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${
+                  rejectionReason.trim()
+                    ? "bg-red-600 text-white hover:bg-red-700 shadow-md hover:shadow-lg"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

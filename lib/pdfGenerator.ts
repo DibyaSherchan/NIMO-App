@@ -421,9 +421,7 @@ export const generateMedicalReportPDF = async (
     currentY
   );
   doc.text("Gov. Reg. No. 69847 066/067", 160, 12);
-  const verifyUrl = `https://localhost:3000/verify/${
-    formData.reportId || "sample-id"
-  }`;
+  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify/${formData.reportId || "sample-id"}`;
   const qrDataUrl = await QRCode.toDataURL(verifyUrl);
   doc.addImage(qrDataUrl, "PNG", 14, 260, 30, 30);
   doc.setFontSize(6);
