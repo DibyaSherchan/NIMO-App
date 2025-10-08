@@ -86,8 +86,10 @@ export async function PATCH(
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Update applicant error:", error);
+
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
     try {
       await Log.create({
@@ -97,7 +99,7 @@ export async function PATCH(
         userAgent,
         details: {
           applicantId: id || "unknown",
-          error: error.message || "Unknown error",
+          error: errorMessage,
           timestamp: new Date().toISOString(),
         },
       });
