@@ -10,8 +10,8 @@ interface RouteParams {
   };
 }
 
-export async function PATCH(request: NextRequest, context: RouteParams) {
-  const { id } = context.params;
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const { id } = params;
   const userAgent = request.headers.get("user-agent") || "unknown";
 
   try {
