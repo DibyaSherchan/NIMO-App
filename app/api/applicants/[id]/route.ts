@@ -4,13 +4,10 @@ import Applicant from "@/models/Applicant";
 import Log from "@/models/Log";
 import { v4 as uuidv4 } from "uuid";
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   const { id } = params;
   const userAgent = request.headers.get("user-agent") || "unknown";
 
