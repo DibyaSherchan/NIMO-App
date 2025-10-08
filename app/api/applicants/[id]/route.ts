@@ -4,12 +4,6 @@ import Applicant from "@/models/Applicant";
 import Log from "@/models/Log";
 import { v4 as uuidv4 } from "uuid";
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
 interface UpdateData {
   status?: string;
   rejectionReason?: string | null;
@@ -17,10 +11,9 @@ interface UpdateData {
 
 export async function PATCH(
   request: NextRequest,
-  context: RouteParams
+  { params }: { params: { id: string } }
 ) {
-  const { params } = context;
-  const userAgent = request.headers.get('user-agent') || 'unknown';
+  const userAgent = request.headers.get("user-agent") || "unknown";
 
   try {
     if (!params?.id) {
@@ -42,6 +35,7 @@ export async function PATCH(
 
     const body = await request.json();
     const { status, rejectionReason } = body;
+
     if (!status && rejectionReason === undefined) {
       return NextResponse.json(
         { error: "Either status or rejectionReason must be provided" },
@@ -55,8 +49,8 @@ export async function PATCH(
         { status: 400 }
       );
     }
+
     const applicant = await Applicant.findById(id);
-    
     if (!applicant) {
       return NextResponse.json(
         { error: "Applicant not found" },
@@ -66,17 +60,16 @@ export async function PATCH(
 
     const previousStatus = applicant.status;
     const updateData: UpdateData = {};
-    if (status) {
-      updateData.status = status;
-    }
-    if (rejectionReason !== undefined) {
-      updateData.rejectionReason = rejectionReason;
-    }
-    const updatedApplicant = await Applicant.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    );
+
+    if (status) updateData.status = status;
+    if (rejectionReason !== undefined) updateData.rejectionReason = rejectionReason;
+
+    const updatedApplicant = await Applicant.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    // Log successful update
     try {
       await Log.create({
         logId: uuidv4(),
@@ -88,27 +81,28 @@ export async function PATCH(
           previousStatus,
           newStatus: status || previousStatus,
           rejectionReason: rejectionReason || null,
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       });
     } catch (logError) {
       console.error("Failed to create log:", logError);
     }
 
     return NextResponse.json(
-      { 
+      {
         message: "Applicant updated successfully",
         applicant: {
           id: updatedApplicant._id,
           applicantId: updatedApplicant.applicantId,
           status: updatedApplicant.status,
-          rejectionReason: updatedApplicant.rejectionReason
-        }
+          rejectionReason: updatedApplicant.rejectionReason,
+        },
       },
       { status: 200 }
     );
   } catch (error: unknown) {
     console.error("Update applicant error:", error);
+
     try {
       await Log.create({
         logId: uuidv4(),
@@ -116,10 +110,10 @@ export async function PATCH(
         userRole: "medical_staff",
         userAgent,
         details: {
-          applicantId: params?.id || 'unknown',
+          applicantId: params?.id || "unknown",
           error: error instanceof Error ? error.message : "Unknown error",
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       });
     } catch (logError) {
       console.error("Failed to create error log:", logError);
