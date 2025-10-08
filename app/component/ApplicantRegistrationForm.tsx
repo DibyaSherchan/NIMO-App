@@ -310,7 +310,7 @@ const ApplicantRegistrationForm = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="block text-sm font-medium mb-1 flex items-center">
+              <label className="text-sm font-medium mb-1 flex items-center">
                 <Mail size={14} className="mr-1" /> Email *
               </label>
               <input
@@ -328,7 +328,7 @@ const ApplicantRegistrationForm = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 flex items-center">
+              <label className="text-sm font-medium mb-1 flex items-center">
                 <Phone size={14} className="mr-1" /> Phone *
               </label>
               <input
@@ -464,7 +464,7 @@ const ApplicantRegistrationForm = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="block text-sm font-medium mb-1 flex items-center">
+              <label className="text-sm font-medium mb-1 flex items-center">
                 <Calendar size={14} className="mr-1" /> Passport Expiry *
               </label>
               <input
@@ -508,7 +508,7 @@ const ApplicantRegistrationForm = () => {
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium mb-1 flex items-center">
+            <label className="text-sm font-medium mb-1 flex items-center">
               <Calendar size={14} className="mr-1" /> Date of Birth *
             </label>
             <input

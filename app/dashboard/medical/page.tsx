@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { FileText, LogOut, X, AlertCircle, CheckCircle, Clock, Filter } from "lucide-react";
+import { FileText, LogOut, X, AlertCircle, CheckCircle, Clock, Filter, TrendingUp, Users, Calendar, PieChart, BarChart3 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 
@@ -22,34 +22,6 @@ interface Applicant {
   status: string;
   rejectionReason?: string;
   createdAt: string;
-}
-
-interface LabResult {
-  result: string;
-  reference: string;
-  unit?: string;
-}
-
-interface ReportFormData {
-  name: string;
-  age: number;
-  sex: string;
-  maritalStatus: string;
-  passportNo: string;
-  passportExpiry: string;
-  passportIssuePlace: string;
-  examinationDate: string;
-  destination: string;
-  nationality: string;
-  height: string;
-  weight: string;
-  pulse: string;
-  temperature: string;
-  bloodPressure: string;
-  clinicalImpression: string;
-  labResults: Record<string, LabResult>;
-  physicianName: string;
-  physicianLicense: string;
 }
 
 const MedicalDashboard = () => {
@@ -108,7 +80,6 @@ const MedicalDashboard = () => {
         }),
       });
 
-      // Refresh applicants list
       const updatedRes = await fetch("/api/applicants");
       const data = await updatedRes.json();
       setApplicants(data);
@@ -150,6 +121,33 @@ const MedicalDashboard = () => {
   const approvedCount = applicants.filter((a) => a.status === "approved").length;
   const rejectedCount = applicants.filter((a) => a.status === "rejected").length;
 
+  // Calculate statistics for the alternative visualization
+  const statusDistribution = [
+    { status: "Pending", count: pendingCount, color: "bg-blue-500", percentage: ((pendingCount / applicants.length) * 100) || 0 },
+    { status: "Under Review", count: underReviewCount, color: "bg-yellow-500", percentage: ((underReviewCount / applicants.length) * 100) || 0 },
+    { status: "Approved", count: approvedCount, color: "bg-green-500", percentage: ((approvedCount / applicants.length) * 100) || 0 },
+    { status: "Rejected", count: rejectedCount, color: "bg-red-500", percentage: ((rejectedCount / applicants.length) * 100) || 0 },
+  ];
+
+  const destinationData = applicants.reduce((acc, a) => {
+    const country = a.destinationCountry;
+    acc[country] = (acc[country] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const topDestinations = Object.entries(destinationData)
+    .map(([country, count]) => ({ country, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  const genderData = applicants.reduce((acc, a) => {
+    acc[a.gender] = (acc[a.gender] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const genderDistribution = Object.entries(genderData)
+    .map(([gender, count]) => ({ gender, count }));
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "approved":
@@ -179,15 +177,21 @@ const MedicalDashboard = () => {
           Sign Out
         </button>
       </div>
+
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500 hover:shadow-lg transition-shadow duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-600 text-sm font-medium">Total Applicants</p>
               <p className="text-3xl font-bold text-gray-800 mt-1">{applicants.length}</p>
+              <div className="flex items-center text-blue-600 text-sm mt-2">
+                <TrendingUp size={14} className="mr-1" />
+                <span>All time</span>
+              </div>
             </div>
             <div className="bg-blue-100 p-3 rounded-lg">
-              <FileText className="text-blue-600" size={24} />
+              <Users className="text-blue-600" size={24} />
             </div>
           </div>
         </div>
@@ -197,6 +201,10 @@ const MedicalDashboard = () => {
             <div>
               <p className="text-gray-600 text-sm font-medium">Pending</p>
               <p className="text-3xl font-bold text-gray-800 mt-1">{pendingCount}</p>
+              <div className="flex items-center text-yellow-600 text-sm mt-2">
+                <Clock size={14} className="mr-1" />
+                <span>Awaiting review</span>
+              </div>
             </div>
             <div className="bg-yellow-100 p-3 rounded-lg">
               <Clock className="text-yellow-600" size={24} />
@@ -209,6 +217,10 @@ const MedicalDashboard = () => {
             <div>
               <p className="text-gray-600 text-sm font-medium">Approved</p>
               <p className="text-3xl font-bold text-gray-800 mt-1">{approvedCount}</p>
+              <div className="flex items-center text-green-600 text-sm mt-2">
+                <CheckCircle size={14} className="mr-1" />
+                <span>Completed</span>
+              </div>
             </div>
             <div className="bg-green-100 p-3 rounded-lg">
               <CheckCircle className="text-green-600" size={24} />
@@ -221,6 +233,10 @@ const MedicalDashboard = () => {
             <div>
               <p className="text-gray-600 text-sm font-medium">Rejected</p>
               <p className="text-3xl font-bold text-gray-800 mt-1">{rejectedCount}</p>
+              <div className="flex items-center text-red-600 text-sm mt-2">
+                <AlertCircle size={14} className="mr-1" />
+                <span>Not qualified</span>
+              </div>
             </div>
             <div className="bg-red-100 p-3 rounded-lg">
               <AlertCircle className="text-red-600" size={24} />
@@ -229,14 +245,148 @@ const MedicalDashboard = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md p-5 mb-6 ">
+      {/* Alternative Visualization Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Status Distribution */}
+        <div className="bg-white p-6 rounded-xl shadow-md border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <PieChart className="w-5 h-5 mr-2 text-blue-600" />
+            Status Distribution
+          </h3>
+          <div className="space-y-4">
+            {statusDistribution.map((item) => (
+              <div key={item.status} className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
+                  <span className="text-sm font-medium text-gray-700">{item.status}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-semibold text-gray-900">{item.count}</span>
+                  <span className="text-xs text-gray-500 w-12 text-right">
+                    ({item.percentage.toFixed(1)}%)
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="flex space-x-2">
+              {statusDistribution.map((item) => (
+                <div
+                  key={item.status}
+                  className={`h-2 rounded-full ${item.color}`}
+                  style={{ width: `${item.percentage}%` }}
+                  title={`${item.status}: ${item.percentage.toFixed(1)}%`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Top Destinations */}
+        <div className="bg-white p-6 rounded-xl shadow-md border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <BarChart3 className="w-5 h-5 mr-2 text-green-600" />
+            Top Destinations
+          </h3>
+          <div className="space-y-3">
+            {topDestinations.map((destination, index) => (
+              <div key={destination.country} className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                    <span className="text-xs font-semibold text-blue-600">{index + 1}</span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">{destination.country}</span>
+                </div>
+                <span className="text-sm font-semibold text-gray-900 bg-gray-100 px-2 py-1 rounded">
+                  {destination.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Gender Distribution */}
+        <div className="bg-white p-6 rounded-xl shadow-md border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Users className="w-5 h-5 mr-2 text-purple-600" />
+            Gender Distribution
+          </h3>
+          <div className="space-y-4">
+            {genderDistribution.map((item) => {
+              const percentage = ((item.count / applicants.length) * 100) || 0;
+              return (
+                <div key={item.gender} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700 capitalize">{item.gender}</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-semibold text-gray-900">{item.count}</span>
+                      <span className="text-xs text-gray-500 w-12 text-right">
+                        ({percentage.toFixed(1)}%)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-purple-600 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="bg-white p-6 rounded-xl shadow-md border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Calendar className="w-5 h-5 mr-2 text-orange-600" />
+            Recent Activity
+          </h3>
+          <div className="space-y-3">
+            {applicants
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              .slice(0, 4)
+              .map((applicant) => (
+                <div key={applicant._id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-2 h-2 rounded-full ${
+                      applicant.status === "approved" ? "bg-green-500" :
+                      applicant.status === "pending" ? "bg-blue-500" :
+                      applicant.status === "under_review" ? "bg-yellow-500" : "bg-red-500"
+                    }`} />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {applicant.firstName} {applicant.lastName}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(applicant.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                    applicant.status === "approved" ? "bg-green-100 text-green-800" :
+                    applicant.status === "pending" ? "bg-blue-100 text-blue-800" :
+                    applicant.status === "under_review" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"
+                  }`}>
+                    {applicant.status.replace("_", " ")}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="bg-white rounded-xl shadow-md p-5 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <input
               type="text"
               placeholder="Search by name, ID, or passport number..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
               className="w-full px-4 py-2.5 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
             />
           </div>
@@ -244,7 +394,7 @@ const MedicalDashboard = () => {
             <Filter size={20} className="text-gray-600" />
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value)}
               className="px-4 py-2.5 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
             >
               <option value="all">All Status</option>
@@ -326,7 +476,7 @@ const MedicalDashboard = () => {
                               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                               : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md"
                           }`}
-                          onClick={(e) => {
+                          onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
                             if (a.status === "approved" || a.status === "rejected") {
                               e.preventDefault();
                             } else if (a.status === "pending") {
@@ -400,7 +550,7 @@ const MedicalDashboard = () => {
               </label>
               <textarea
                 value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setRejectionReason(e.target.value)}
                 placeholder="Please provide a detailed reason for rejection..."
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none transition-all duration-200"
                 rows={4}
