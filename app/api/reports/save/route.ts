@@ -6,82 +6,51 @@ import Applicant from "@/models/Applicant";
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
-    const body = await req.json();
-    const {
-      reportId,
-      applicantId,
-      name,
-      age,
-      sex,
-      passportNo,
-      passportExpiry,
-      examinationDate,
-      destination,
-      nationality,
-      height,
-      weight,
-      pulse,
-      temperature,
-      bloodPressure,
-      clinicalImpression,
-      labResults,
-      physicianName,
-      physicianLicense,
-      chestXRay,
-      ecg,
-      vision,
-      hearing,
-      urineTest,
-      stoolTest,
-      pregnancyTest,
-      vaccinationStatus,
-      pdfData,
-    } = body;
 
-    // Validate required fields
-    if (!applicantId || !reportId || !name || !passportNo) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
+    const formData = await req.json();
+    const { applicantId, pdfData, ...reportData } = formData;
+    const reportId = `MED${Date.now()}${Math.random().toString(36).substr(2, 5)}`.toUpperCase();
 
-    // Create the medical report
+    
     const medicalReport = new MedicalReport({
       reportId,
       applicantId,
       reportType: "Medical Examination",
-      name,
-      age,
-      sex,
-      passportNo,
-      passportExpiry,
-      examinationDate,
-      destination,
-      nationality,
-      physicianName,
-      physicianLicense,
-      status: "approved",
-      testResults: labResults,
-      doctorRemarks: clinicalImpression,
+      
+      // Add these fields for QR verification
+      name: reportData.name,
+      age: reportData.age,
+      sex: reportData.sex,
+      passportNo: reportData.passportNo,
+      passportExpiry: reportData.passportExpiry,
+      examinationDate: reportData.examinationDate,
+      destination: reportData.destination,
+      nationality: reportData.nationality,
+      physicianName: reportData.physicianName,
+      physicianLicense: reportData.physicianLicense,
+      
+      testResults: reportData.labResults,
+      doctorRemarks: reportData.clinicalImpression,
       physicalExamination: {
-        height,
-        weight,
-        bloodPressure,
-        pulse,
-        temperature,
+        height: reportData.height,
+        weight: reportData.weight,
+        bloodPressure: reportData.bloodPressure,
+        pulse: reportData.pulse,
+        temperature: reportData.temperature
       },
       specialTests: {
-        chestXRay,
-        ecg,
-        vision,
-        hearing,
-        urineTest,
-        stoolTest,
-        pregnancyTest,
+        chestXRay: reportData.chestXRay,
+        ecg: reportData.ecg,
+        vision: reportData.vision,
+        hearing: reportData.hearing,
+        urineTest: reportData.urineTest,
+        stoolTest: reportData.stoolTest,
+        pregnancyTest: reportData.pregnancyTest
       },
-      vaccinationStatus,
-      pdfData,
+      vaccinationStatus: reportData.vaccinationStatus,
+      pdfData: pdfData,
+      status: "approved",
+      createdAt: new Date(),
     });
 
     await medicalReport.save();
@@ -89,7 +58,7 @@ export async function POST(req: NextRequest) {
       { applicantId },
       {
         status: "approved",
-        medicalReport: pdfData, // Store the PDF data in the applicant record
+        medicalReport: pdfData,
       },
       { new: true }
     );
@@ -116,10 +85,13 @@ export async function POST(req: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error saving medical report:", error);
+    
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    
     return NextResponse.json(
-      { error: "Failed to save medical report", details: error.message },
+      { error: "Failed to save medical report", details: errorMessage },
       { status: 500 }
     );
   }
