@@ -4,10 +4,22 @@ import Applicant from "@/models/Applicant";
 import Log from "@/models/Log";
 import { v4 as uuidv4 } from "uuid";
 
+interface RouteParams {
+  params: {
+    id: string;
+  };
+}
+
+interface UpdateData {
+  status?: string;
+  rejectionReason?: string | null;
+}
+
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: RouteParams
 ) {
+  const { params } = context;
   const userAgent = request.headers.get('user-agent') || 'unknown';
 
   try {
@@ -36,13 +48,13 @@ export async function PATCH(
         { status: 400 }
       );
     }
+
     if (status && !["pending", "approved", "rejected", "under_review"].includes(status)) {
       return NextResponse.json(
         { error: "Invalid status value" },
         { status: 400 }
       );
     }
-
     const applicant = await Applicant.findById(id);
     
     if (!applicant) {
@@ -53,15 +65,18 @@ export async function PATCH(
     }
 
     const previousStatus = applicant.status;
+    const updateData: UpdateData = {};
     if (status) {
-      applicant.status = status;
+      updateData.status = status;
     }
-    
     if (rejectionReason !== undefined) {
-      applicant.rejectionReason = rejectionReason;
+      updateData.rejectionReason = rejectionReason;
     }
-
-    await applicant.save();
+    const updatedApplicant = await Applicant.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
     try {
       await Log.create({
         logId: uuidv4(),
@@ -69,7 +84,7 @@ export async function PATCH(
         userRole: "medical_staff",
         userAgent,
         details: {
-          applicantId: applicant.applicantId,
+          applicantId: updatedApplicant.applicantId,
           previousStatus,
           newStatus: status || previousStatus,
           rejectionReason: rejectionReason || null,
@@ -84,10 +99,10 @@ export async function PATCH(
       { 
         message: "Applicant updated successfully",
         applicant: {
-          id: applicant._id,
-          applicantId: applicant.applicantId,
-          status: applicant.status,
-          rejectionReason: applicant.rejectionReason
+          id: updatedApplicant._id,
+          applicantId: updatedApplicant.applicantId,
+          status: updatedApplicant.status,
+          rejectionReason: updatedApplicant.rejectionReason
         }
       },
       { status: 200 }
