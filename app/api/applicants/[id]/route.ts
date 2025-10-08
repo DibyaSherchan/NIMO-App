@@ -11,7 +11,7 @@ interface UpdateData {
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Record<string, string> }
 ) {
   const { id } = context.params;
   const userAgent = request.headers.get("user-agent") || "unknown";
@@ -86,9 +86,8 @@ export async function PATCH(
       },
       { status: 200 }
     );
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Update applicant error:", errorMessage);
+  } catch (error: any) {
+    console.error("Update applicant error:", error);
 
     try {
       await Log.create({
@@ -98,7 +97,7 @@ export async function PATCH(
         userAgent,
         details: {
           applicantId: id || "unknown",
-          error: errorMessage,
+          error: error.message || "Unknown error",
           timestamp: new Date().toISOString(),
         },
       });
