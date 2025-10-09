@@ -9,15 +9,14 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.json();
     const { applicantId, pdfData, ...reportData } = formData;
-    const reportId = `MED${Date.now()}${Math.random().toString(36).substr(2, 5)}`.toUpperCase();
+    const reportId = `MED${Date.now()}${Math.random()
+      .toString(36)
+      .substr(2, 5)}`.toUpperCase();
 
-    
     const medicalReport = new MedicalReport({
       reportId,
       applicantId,
       reportType: "Medical Examination",
-      
-      // Add these fields for QR verification
       name: reportData.name,
       age: reportData.age,
       sex: reportData.sex,
@@ -28,7 +27,7 @@ export async function POST(req: NextRequest) {
       nationality: reportData.nationality,
       physicianName: reportData.physicianName,
       physicianLicense: reportData.physicianLicense,
-      
+
       testResults: reportData.labResults,
       doctorRemarks: reportData.clinicalImpression,
       physicalExamination: {
@@ -36,7 +35,7 @@ export async function POST(req: NextRequest) {
         weight: reportData.weight,
         bloodPressure: reportData.bloodPressure,
         pulse: reportData.pulse,
-        temperature: reportData.temperature
+        temperature: reportData.temperature,
       },
       specialTests: {
         chestXRay: reportData.chestXRay,
@@ -45,7 +44,7 @@ export async function POST(req: NextRequest) {
         hearing: reportData.hearing,
         urineTest: reportData.urineTest,
         stoolTest: reportData.stoolTest,
-        pregnancyTest: reportData.pregnancyTest
+        pregnancyTest: reportData.pregnancyTest,
       },
       vaccinationStatus: reportData.vaccinationStatus,
       pdfData: pdfData,
@@ -58,7 +57,7 @@ export async function POST(req: NextRequest) {
       { applicantId },
       {
         status: "approved",
-        medicalReport: pdfData,
+        medicalReport: reportId,
       },
       { new: true }
     );
@@ -87,9 +86,10 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error("Error saving medical report:", error);
-    
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    
+
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+
     return NextResponse.json(
       { error: "Failed to save medical report", details: errorMessage },
       { status: 500 }

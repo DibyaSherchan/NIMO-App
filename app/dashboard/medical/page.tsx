@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { FileText, LogOut, X, AlertCircle, CheckCircle, Clock, Filter, TrendingUp, Users, Calendar, PieChart, BarChart3 } from "lucide-react";
+import { FileText, LogOut, X, AlertCircle, CheckCircle, Clock, Filter, TrendingUp, Users, Calendar, PieChart, BarChart3, Edit } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 
@@ -121,7 +121,6 @@ const MedicalDashboard = () => {
   const approvedCount = applicants.filter((a) => a.status === "approved").length;
   const rejectedCount = applicants.filter((a) => a.status === "rejected").length;
 
-  // Calculate statistics for the alternative visualization
   const statusDistribution = [
     { status: "Pending", count: pendingCount, color: "bg-blue-500", percentage: ((pendingCount / applicants.length) * 100) || 0 },
     { status: "Under Review", count: underReviewCount, color: "bg-yellow-500", percentage: ((underReviewCount / applicants.length) * 100) || 0 },
@@ -470,7 +469,7 @@ const MedicalDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex gap-2">
                         <Link
-                          href={`/reports/generate?applicantId=${a.applicantId}`}
+                          href={`/reports/generate?applicantId=${a.applicantId}&reportId=${a.medicalReport}&edit=true`}
                           className={`flex items-center px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
                             a.status === "approved" || a.status === "rejected"
                               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -502,14 +501,25 @@ const MedicalDashboard = () => {
                         </button>
 
                         {a.medicalReport && (
-                          <a
-                            href={`/api/reports/generate?reportId=${a.medicalReport}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 shadow-sm hover:shadow-md text-sm font-medium"
-                          >
-                            View Report
-                          </a>
+                          <>
+                            <Link
+                              href={`/reports/view?reportId=${a.medicalReport}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 shadow-sm hover:shadow-md text-sm font-medium"
+                            >
+                              <FileText size={16} className="mr-2" />
+                              View Report
+                            </Link>
+                            
+                            <Link
+                              href={`/reports/generate?applicantId=${a.applicantId}&reportId=${a.medicalReport}&edit=true`}
+                              className="flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all duration-200 shadow-sm hover:shadow-md text-sm font-medium"
+                            >
+                              <Edit size={16} className="mr-2" />
+                              Edit
+                            </Link>
+                          </>
                         )}
                       </div>
                     </td>

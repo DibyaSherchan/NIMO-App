@@ -1,7 +1,14 @@
 "use client";
 import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FileText, ArrowLeft, Save, User, Search, Download } from "lucide-react";
+import {
+  FileText,
+  ArrowLeft,
+  Save,
+  User,
+  Search,
+  Download,
+} from "lucide-react";
 import { generateMedicalReportPDF } from "@/lib/pdfGenerator";
 
 interface LabResult {
@@ -69,16 +76,21 @@ const GenerateReportContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const applicantIdFromUrl = searchParams.get("applicantId");
-  
+  const reportIdFromUrl = searchParams.get("reportId");
+  const isEditMode = searchParams.get("edit") === "true";
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [filteredApplicants, setFilteredApplicants] = useState<Applicant[]>([]);
   const [showApplicantList, setShowApplicantList] = useState(false);
-  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
+  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(
+    null
+  );
   const [generatedPdfUrl, setGeneratedPdfUrl] = useState<string | null>(null);
-  
+  const [isEditing, setIsEditing] = useState(false);
+
   const [formData, setFormData] = useState<ReportFormData>({
     name: "",
     age: "0",
@@ -97,18 +109,34 @@ const GenerateReportContent = () => {
     bloodPressure: "120/80",
     clinicalImpression: "Normal",
     labResults: {
-      "Total WBC Count": { result: "6,700", reference: "4000-11700", unit: "/cmm" },
+      "Total WBC Count": {
+        result: "6,700",
+        reference: "4000-11700",
+        unit: "/cmm",
+      },
       Neutrophils: { result: "66", reference: "43-75%", unit: "%" },
       Lymphocytes: { result: "27", reference: "25-40%", unit: "%" },
       Eosinophils: { result: "03", reference: "1-6%", unit: "%" },
       Monocytes: { result: "04", reference: "2-8%", unit: "%" },
       Basophils: { result: "00", reference: "0-3%", unit: "%" },
       ESR: { result: "10", reference: "M <15, F <20", unit: "mm/hr" },
-      Hemoglobin: { result: "12.6", reference: "M 13.5-17.5, F 12.0-15.5", unit: "g/dL" },
-      "Random Blood Sugar": { result: "102", reference: "60-140", unit: "mg/dL" },
+      Hemoglobin: {
+        result: "12.6",
+        reference: "M 13.5-17.5, F 12.0-15.5",
+        unit: "g/dL",
+      },
+      "Random Blood Sugar": {
+        result: "102",
+        reference: "60-140",
+        unit: "mg/dL",
+      },
       Urea: { result: "25", reference: "20-40", unit: "mg/dL" },
       Creatinine: { result: "1.0", reference: "0.6-1.4", unit: "mg/dL" },
-      "Bilirubin (Total/Direct)": { result: "0.9/0.3", reference: "0.2-1.2/0.0-0.3", unit: "mg/dL" },
+      "Bilirubin (Total/Direct)": {
+        result: "0.9/0.3",
+        reference: "0.2-1.2/0.0-0.3",
+        unit: "mg/dL",
+      },
       SGPT: { result: "29", reference: "Up to 41", unit: "U/L" },
       SGOT: { result: "27", reference: "Up to 41", unit: "U/L" },
       "Anti-HIV (1&2)": { result: "Non Reactive", reference: "Non Reactive" },
@@ -119,8 +147,8 @@ const GenerateReportContent = () => {
       "ABO-Blood Group & Rh-type": { result: "B+ve", reference: "" },
       "Malaria Parasite": { result: "Not Found", reference: "" },
       "Micro Filaria": { result: "Not Found", reference: "" },
-      "Opiates": { result: "Negative", reference: "" },
-      "Cannabis": { result: "Negative", reference: "" },
+      Opiates: { result: "Negative", reference: "" },
+      Cannabis: { result: "Negative", reference: "" },
       "Mantoux Test": { result: "Negative", reference: "" },
     },
     physicianName: "DR. ANUJ SHRESTHA",
@@ -157,24 +185,102 @@ const GenerateReportContent = () => {
   }, []);
 
   useEffect(() => {
-    if (applicantIdFromUrl) {
-      const applicant = applicants.find(a => a.applicantId === applicantIdFromUrl);
+    if (reportIdFromUrl && isEditMode) {
+      fetchExistingReport(reportIdFromUrl);
+      setIsEditing(true);
+    } else if (applicantIdFromUrl) {
+      const applicant = applicants.find(
+        (a) => a.applicantId === applicantIdFromUrl
+      );
       if (applicant) {
         handleSelectApplicant(applicant);
       }
     }
-  }, [applicantIdFromUrl, applicants]);
+  }, [applicantIdFromUrl, reportIdFromUrl, isEditMode, applicants]);
+
+  const fetchExistingReport = async (reportId: string) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/reports/${reportId}`);
+      if (res.ok) {
+        const reportData = await res.json();
+        if (
+          !reportData.labResults ||
+          typeof reportData.labResults !== "object"
+        ) {
+          reportData.labResults = {
+            "Total WBC Count": {
+              result: "6,700",
+              reference: "4000-11700",
+              unit: "/cmm",
+            },
+            Neutrophils: { result: "66", reference: "43-75%", unit: "%" },
+            Lymphocytes: { result: "27", reference: "25-40%", unit: "%" },
+            Eosinophils: { result: "03", reference: "1-6%", unit: "%" },
+            Monocytes: { result: "04", reference: "2-8%", unit: "%" },
+            Basophils: { result: "00", reference: "0-3%", unit: "%" },
+            ESR: { result: "10", reference: "M <15, F <20", unit: "mm/hr" },
+            Hemoglobin: {
+              result: "12.6",
+              reference: "M 13.5-17.5, F 12.0-15.5",
+              unit: "g/dL",
+            },
+            "Random Blood Sugar": {
+              result: "102",
+              reference: "60-140",
+              unit: "mg/dL",
+            },
+            Urea: { result: "25", reference: "20-40", unit: "mg/dL" },
+            Creatinine: { result: "1.0", reference: "0.6-1.4", unit: "mg/dL" },
+            "Bilirubin (Total/Direct)": {
+              result: "0.9/0.3",
+              reference: "0.2-1.2/0.0-0.3",
+              unit: "mg/dL",
+            },
+            SGPT: { result: "29", reference: "Up to 41", unit: "U/L" },
+            SGOT: { result: "27", reference: "Up to 41", unit: "U/L" },
+            "Anti-HIV (1&2)": {
+              result: "Non Reactive",
+              reference: "Non Reactive",
+            },
+            HBsAg: { result: "Negative", reference: "Negative" },
+            "Anti-HCV": { result: "Negative", reference: "Negative" },
+            "VDIL/RPR": { result: "Non Reactive", reference: "Non Reactive" },
+            TPHA: { result: "Non Reactive", reference: "Non Reactive" },
+            "ABO-Blood Group & Rh-type": { result: "B+ve", reference: "" },
+            "Malaria Parasite": { result: "Not Found", reference: "" },
+            "Micro Filaria": { result: "Not Found", reference: "" },
+            Opiates: { result: "Negative", reference: "" },
+            Cannabis: { result: "Negative", reference: "" },
+            "Mantoux Test": { result: "Negative", reference: "" },
+          };
+        }
+
+        setFormData(reportData);
+        setSearchTerm(`${reportData.name} (${reportData.passportNo})`);
+        alert("Report loaded for editing");
+      } else {
+        alert("Failed to load report for editing");
+      }
+    } catch (error) {
+      console.error("Error fetching report:", error);
+      alert("Error loading report");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
-    
+
     if (term.length > 1) {
-      const filtered = applicants.filter(applicant => 
-        applicant.firstName.toLowerCase().includes(term.toLowerCase()) ||
-        applicant.lastName.toLowerCase().includes(term.toLowerCase()) ||
-        applicant.passportNumber.toLowerCase().includes(term.toLowerCase()) ||
-        applicant.applicantId.toLowerCase().includes(term.toLowerCase())
+      const filtered = applicants.filter(
+        (applicant) =>
+          applicant.firstName.toLowerCase().includes(term.toLowerCase()) ||
+          applicant.lastName.toLowerCase().includes(term.toLowerCase()) ||
+          applicant.passportNumber.toLowerCase().includes(term.toLowerCase()) ||
+          applicant.applicantId.toLowerCase().includes(term.toLowerCase())
       );
       setFilteredApplicants(filtered);
       setShowApplicantList(true);
@@ -187,33 +293,36 @@ const GenerateReportContent = () => {
   const handleSelectApplicant = (applicant: Applicant) => {
     setSelectedApplicant(applicant);
     setShowApplicantList(false);
-    setSearchTerm(`${applicant.firstName} ${applicant.lastName} (${applicant.passportNumber})`);
-    
-    // Calculate age from date of birth
+    setSearchTerm(
+      `${applicant.firstName} ${applicant.lastName} (${applicant.passportNumber})`
+    );
+
     const birthDate = new Date(applicant.dateOfBirth);
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       name: `${applicant.firstName} ${applicant.lastName}`,
       age: age.toString(),
       sex: applicant.gender,
       passportNo: applicant.passportNumber,
-      passportExpiry: applicant.passportExpiry.split('T')[0],
+      passportExpiry: applicant.passportExpiry.split("T")[0],
       nationality: applicant.nationality,
       destination: applicant.destinationCountry,
       applicantId: applicant.applicantId,
       email: applicant.email,
       phone: applicant.phone,
       address: applicant.address,
-      dateOfBirth: applicant.dateOfBirth.split('T')[0],
+      dateOfBirth: applicant.dateOfBirth.split("T")[0],
       medicalHistory: applicant.medicalHistory || "",
     }));
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -271,8 +380,14 @@ const GenerateReportContent = () => {
       reader.readAsDataURL(pdfBlob);
       reader.onloadend = async () => {
         const base64data = reader.result as string;
-        const response = await fetch("/api/reports/save", {
-          method: "POST",
+
+        const endpoint = isEditing
+          ? `/api/reports/${formData.reportId}`
+          : "/api/reports/save";
+        const method = isEditing ? "PUT" : "POST";
+
+        const response = await fetch(endpoint, {
+          method: method,
           headers: {
             "Content-Type": "application/json",
           },
@@ -284,7 +399,11 @@ const GenerateReportContent = () => {
 
         if (response.ok) {
           const result = await response.json();
-          alert("Report saved successfully!");
+          alert(
+            isEditing
+              ? "Report updated successfully!"
+              : "Report saved successfully!"
+          );
           console.log("Saved report ID:", result.reportId);
           const pdfUrl = URL.createObjectURL(pdfBlob);
           setGeneratedPdfUrl(pdfUrl);
@@ -302,7 +421,7 @@ const GenerateReportContent = () => {
 
   const handleGenerateOnly = async () => {
     if (!validateForm()) return;
-    
+
     setLoading(true);
     try {
       const pdfBlob = await generateMedicalReportPDF(formData);
@@ -327,7 +446,9 @@ const GenerateReportContent = () => {
           <ArrowLeft size={16} className="mr-2" />
           Back
         </button>
-        <h1 className="text-2xl font-bold">Generate Medical Report</h1>
+        <h1 className="text-2xl font-bold">
+          {isEditing ? "Edit Medical Report" : "Generate Medical Report"}
+        </h1>
       </div>
 
       {generatedPdfUrl && (
@@ -346,49 +467,63 @@ const GenerateReportContent = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-lg p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">Select Applicant</h2>
-        <div className="relative">
-          <div className="flex items-center border rounded-md p-2">
-            <Search size={16} className="text-gray-400 mr-2" />
-            <input
-              type="text"
-              placeholder="Search by name, passport number, or applicant ID"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              className="flex-1 outline-none"
-            />
+      {!isEditing && (
+        <div className="bg-white rounded-lg p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">Select Applicant</h2>
+          <div className="relative">
+            <div className="flex items-center border rounded-md p-2">
+              <Search size={16} className="text-gray-400 mr-2" />
+              <input
+                type="text"
+                placeholder="Search by name, passport number, or applicant ID"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="flex-1 outline-none"
+              />
+            </div>
+
+            {showApplicantList && filteredApplicants.length > 0 && (
+              <div className="absolute z-10 w-full bg-white border rounded-md mt-1 max-h-60 overflow-y-auto">
+                {filteredApplicants.map((applicant) => (
+                  <div
+                    key={applicant._id}
+                    className="p-3 border-b hover:bg-gray-100 cursor-pointer"
+                    onClick={() => handleSelectApplicant(applicant)}
+                  >
+                    <div className="font-medium">
+                      {applicant.firstName} {applicant.lastName}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Passport: {applicant.passportNumber} | ID:{" "}
+                      {applicant.applicantId}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          
-          {showApplicantList && filteredApplicants.length > 0 && (
-            <div className="absolute z-10 w-full bg-white border rounded-md mt-1 max-h-60 overflow-y-auto">
-              {filteredApplicants.map(applicant => (
-                <div
-                  key={applicant._id}
-                  className="p-3 border-b hover:bg-gray-100 cursor-pointer"
-                  onClick={() => handleSelectApplicant(applicant)}
-                >
-                  <div className="font-medium">
-                    {applicant.firstName} {applicant.lastName}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    Passport: {applicant.passportNumber} | ID: {applicant.applicantId}
-                  </div>
-                </div>
-              ))}
+
+          {selectedApplicant && (
+            <div className="mt-4 p-3 bg-green-50 rounded-md">
+              <div className="flex items-center">
+                <User size={16} className="text-green-600 mr-2" />
+                <span className="font-medium">
+                  Selected: {selectedApplicant.firstName}{" "}
+                  {selectedApplicant.lastName}
+                </span>
+              </div>
             </div>
           )}
         </div>
+      )}
 
-        {selectedApplicant && (
-          <div className="mt-4 p-3 bg-green-50 rounded-md">
-            <div className="flex items-center">
-              <User size={16} className="text-green-600 mr-2" />
-              <span className="font-medium">Selected: {selectedApplicant.firstName} {selectedApplicant.lastName}</span>
-            </div>
-          </div>
-        )}
-      </div>
+      {isEditing && (
+        <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-6">
+          <p>
+            Editing existing report for: <strong>{formData.name}</strong>
+          </p>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg p-6">
         <div className="space-y-6">
@@ -425,9 +560,7 @@ const GenerateReportContent = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                Age
-              </label>
+              <label className="block mb-1 text-sm font-medium">Age</label>
               <input
                 type="number"
                 name="age"
@@ -439,9 +572,7 @@ const GenerateReportContent = () => {
             </div>
 
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                Sex
-              </label>
+              <label className="block mb-1 text-sm font-medium">Sex</label>
               <select
                 name="sex"
                 value={formData.sex}
@@ -667,9 +798,7 @@ const GenerateReportContent = () => {
             </div>
 
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                ECG
-              </label>
+              <label className="block mb-1 text-sm font-medium">ECG</label>
               <input
                 type="text"
                 name="ecg"
@@ -683,9 +812,7 @@ const GenerateReportContent = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                Vision
-              </label>
+              <label className="block mb-1 text-sm font-medium">Vision</label>
               <input
                 type="text"
                 name="vision"
@@ -697,9 +824,7 @@ const GenerateReportContent = () => {
             </div>
 
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                Hearing
-              </label>
+              <label className="block mb-1 text-sm font-medium">Hearing</label>
               <input
                 type="text"
                 name="hearing"
@@ -803,9 +928,7 @@ const GenerateReportContent = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                Email
-              </label>
+              <label className="block mb-1 text-sm font-medium">Email</label>
               <input
                 type="email"
                 name="email"
@@ -817,9 +940,7 @@ const GenerateReportContent = () => {
             </div>
 
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                Phone
-              </label>
+              <label className="block mb-1 text-sm font-medium">Phone</label>
               <input
                 type="tel"
                 name="phone"
@@ -832,9 +953,7 @@ const GenerateReportContent = () => {
           </div>
 
           <div>
-            <label className="block mb-1 text-sm font-medium">
-              Address
-            </label>
+            <label className="block mb-1 text-sm font-medium">Address</label>
             <textarea
               name="address"
               value={formData.address}
@@ -874,12 +993,10 @@ const GenerateReportContent = () => {
           </div>
 
           <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-2">
-              Laboratory Results
-            </h3>
+            <h3 className="text-lg font-semibold mb-2">Laboratory Results</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {Object.entries(formData.labResults).map(
-                ([test, data]) => (
+              {formData.labResults &&
+                Object.entries(formData.labResults).map(([test, data]) => (
                   <div key={test} className="border p-2 rounded">
                     <label className="block mb-1 text-sm font-medium">
                       {test}
@@ -888,11 +1005,7 @@ const GenerateReportContent = () => {
                       type="text"
                       value={data.result}
                       onChange={(e) =>
-                        handleLabResultChange(
-                          test,
-                          "result",
-                          e.target.value
-                        )
+                        handleLabResultChange(test, "result", e.target.value)
                       }
                       className="w-full p-1 border rounded mb-1"
                       placeholder="Result"
@@ -901,18 +1014,13 @@ const GenerateReportContent = () => {
                       type="text"
                       value={data.reference}
                       onChange={(e) =>
-                        handleLabResultChange(
-                          test,
-                          "reference",
-                          e.target.value
-                        )
+                        handleLabResultChange(test, "reference", e.target.value)
                       }
                       className="w-full p-1 border rounded"
                       placeholder="Reference Range"
                     />
                   </div>
-                )
-              )}
+                ))}
             </div>
           </div>
 
@@ -932,7 +1040,13 @@ const GenerateReportContent = () => {
               className="flex items-center px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-green-300 transition duration-200"
             >
               <Save size={16} className="mr-2" />
-              {saving ? "Saving..." : "Generate & Save to DB"}
+              {saving
+                ? isEditing
+                  ? "Updating..."
+                  : "Saving..."
+                : isEditing
+                ? "Update Report"
+                : "Generate & Save to DB"}
             </button>
           </div>
         </div>
@@ -941,7 +1055,6 @@ const GenerateReportContent = () => {
   );
 };
 
-// Loading fallback component
 const LoadingFallback = () => (
   <div className="p-6 mx-auto min-h-screen bg-gray-100 text-black">
     <div className="flex items-center mb-6">
@@ -968,7 +1081,6 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Main component with Suspense boundary
 const GenerateReportPage = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
