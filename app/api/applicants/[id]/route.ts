@@ -11,9 +11,9 @@ interface UpdateData {
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: Record<string, string> }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = context.params;
+  const { id } = await context.params;
   const userAgent = request.headers.get("user-agent") || "unknown";
 
   try {
