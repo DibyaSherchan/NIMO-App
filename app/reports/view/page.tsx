@@ -70,16 +70,12 @@ const ViewReportContent = () => {
     try {
       setLoading(true);
       setError(null);
-
-      // Fetch report metadata
       const metadataRes = await fetch(`/api/reports/${reportId}`);
       if (!metadataRes.ok) {
         throw new Error("Failed to fetch report metadata");
       }
       const metadata: ReportData = await metadataRes.json();
       setReportData(metadata);
-
-      // Fetch PDF
       const pdfRes = await fetch(`/api/reports/view?reportId=${reportId}`);
       if (!pdfRes.ok) {
         throw new Error("Failed to fetch PDF");
