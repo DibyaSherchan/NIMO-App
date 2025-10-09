@@ -130,7 +130,7 @@ export default function VerifyReport() {
                 <AlertCircle className="w-20 h-20 text-yellow-500" />
               )}
             </div>
-            <h1 className="text-3xl font-bold text-center mb-2">
+            <h1 className="text-3xl font-bold text-center mb-2 text-black">
               {isValid ? "Report Verified ✓" : "Report Expired"}
             </h1>
             <p className="text-center text-gray-600">
@@ -148,31 +148,31 @@ export default function VerifyReport() {
                   <label className="text-sm font-semibold text-gray-500">
                     Report ID
                   </label>
-                  <p className="text-lg font-mono">{reportData.reportId}</p>
+                  <p className="text-lg font-mono text-black">{reportData.reportId}</p>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-gray-500">
                     Patient Name
                   </label>
-                  <p className="text-lg">{reportData.name}</p>
+                  <p className="text-lg text-black">{reportData.name}</p>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-gray-500">
                     Passport No.
                   </label>
-                  <p className="text-lg">{reportData.passportNo}</p>
+                  <p className="text-lg text-black">{reportData.passportNo}</p>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-gray-500">
                     Destination
                   </label>
-                  <p className="text-lg">{reportData.destination}</p>
+                  <p className="text-lg text-black">{reportData.destination}</p>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-gray-500">
                     Examination Date
                   </label>
-                  <p className="text-lg">
+                  <p className="text-lg text-black">
                     {new Date(reportData.examinationDate).toLocaleDateString()}
                   </p>
                 </div>
@@ -180,7 +180,7 @@ export default function VerifyReport() {
                   <label className="text-sm font-semibold text-gray-500">
                     Valid Until
                   </label>
-                  <p className="text-lg">
+                  <p className="text-lg text-black">
                     {new Date(reportData.validUntil).toLocaleDateString()}
                   </p>
                 </div>
@@ -188,7 +188,7 @@ export default function VerifyReport() {
                   <label className="text-sm font-semibold text-gray-500">
                     Physician
                   </label>
-                  <p className="text-lg">{reportData.physicianName}</p>
+                  <p className="text-lg text-black">{reportData.physicianName}</p>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-gray-500">
@@ -209,7 +209,7 @@ export default function VerifyReport() {
 
         {/* PDF Verification Card */}
         <div className="bg-white rounded-lg shadow-xl p-6">
-          <h2 className="text-2xl font-bold mb-4 flex items-center">
+          <h2 className="text-2xl font-bold mb-4 flex items-center text-black">
             <FileText className="w-6 h-6 mr-2 text-blue-600" />
             Verify PDF Document
           </h2>
@@ -305,11 +305,6 @@ export default function VerifyReport() {
                   <p>
                     <span className="font-semibold">Report ID:</span>{" "}
                     {reportData.reportId}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-4">
-                    This verification system uses cryptographic hashing to
-                    ensure document integrity. Any modification to the PDF will
-                    result in a different hash, making tampering detectable.
                   </p>
                 </div>
               </details>
