@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, Download, FileText, Loader2, AlertCircle, Printer, Share2 } from "lucide-react";
 
@@ -46,7 +46,7 @@ interface ReportData {
   reportId: string;
 }
 
-const ViewReportPage = () => {
+const ViewReportContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const reportId = searchParams.get("reportId");
@@ -307,6 +307,22 @@ const ViewReportPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const ViewReportPage = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Loading Report</h2>
+          <p className="text-gray-600">Please wait while we fetch the medical report...</p>
+        </div>
+      </div>
+    }>
+      <ViewReportContent />
+    </Suspense>
   );
 };
 
