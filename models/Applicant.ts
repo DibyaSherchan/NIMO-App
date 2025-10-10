@@ -47,17 +47,26 @@ export interface IApplicant extends Document {
   phone: string;
   passportNumber: string;
   passportExpiry: Date;
+  passportIssuePlace: string;
   dateOfBirth: Date;
   nationality: string;
   gender: string;
+  maritalStatus: string;
   address: string;
+  emergencyContact: string;
+  emergencyPhone: string;
   destinationCountry: string;
+  jobPosition: string;
   medicalHistory: string;
   biometricData: string;
   passportScan: string;
   medicalReport: string;
   status: string;
   rejectionReason?: string;
+  paymentMethod?: string;
+  paymentStatus: string;
+  paymentProof?: string;
+  paymentVerifiedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -83,6 +92,7 @@ const ApplicantSchema: Schema<IApplicant> = new Schema(
       set: encrypt,
     },
     passportExpiry: { type: Date, required: true },
+    passportIssuePlace: { type: String, required: true },
     dateOfBirth: { type: Date, required: true },
     nationality: { type: String, required: true },
     gender: {
@@ -90,8 +100,16 @@ const ApplicantSchema: Schema<IApplicant> = new Schema(
       required: true,
       enum: ["Male", "Female", "Other"],
     },
+    maritalStatus: {
+      type: String,
+      required: true,
+      enum: ["Single", "Married", "Divorced", "Widowed"],
+    },
     address: { type: String, required: true },
+    emergencyContact: { type: String, required: true },
+    emergencyPhone: { type: String, required: true },
     destinationCountry: { type: String, required: true },
+    jobPosition: { type: String, required: true },
     medicalHistory: { type: String, default: "" },
     biometricData: {
       type: String,
@@ -119,6 +137,32 @@ const ApplicantSchema: Schema<IApplicant> = new Schema(
     rejectionReason: {
       type: String,
       default: "",
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["qr_phonepay", "card", "cash"],
+      default: null,
+    },
+    paymentStatus: {
+      type: String,
+      enum: [
+        "pending",
+        "pending_verification",
+        "pending_reception",
+        "verified",
+        "completed",
+      ],
+      default: "pending",
+    },
+    paymentProof: {
+      type: String,
+      default: "",
+      get: decrypt,
+      set: encrypt,
+    },
+    paymentVerifiedAt: {
+      type: Date,
+      default: null,
     },
   },
   {

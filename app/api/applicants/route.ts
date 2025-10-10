@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
 import { connectDB } from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
 import Log from "@/models/Log";
-import { v4 as uuidv4 } from "uuid";
+
 export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || 'unknown';
 
@@ -10,24 +13,162 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const formData = await request.formData();
+    const firstName = formData.get("firstName") as string;
+    const lastName = formData.get("lastName") as string;
+    const email = formData.get("email") as string;
+    const phone = formData.get("phone") as string;
+    const passportNumber = formData.get("passportNumber") as string;
+    const passportExpiry = formData.get("passportExpiry") as string;
+    const passportIssuePlace = formData.get("passportIssuePlace") as string;
+    const dateOfBirth = formData.get("dateOfBirth") as string;
+    const nationality = formData.get("nationality") as string;
+    const gender = formData.get("gender") as string;
+    const maritalStatus = formData.get("maritalStatus") as string;
+    const address = formData.get("address") as string;
+    const emergencyContact = formData.get("emergencyContact") as string;
+    const emergencyPhone = formData.get("emergencyPhone") as string;
+    const destinationCountry = formData.get("destinationCountry") as string;
+    const jobPosition = formData.get("jobPosition") as string;
+    const medicalHistory = formData.get("medicalHistory") as string || "";
+
+    // Files
+    const passportScan = formData.get("passportScan") as File;
+    const medicalReport = formData.get("medicalReport") as File | null;
+    const biometricData = formData.get("biometricData") as File | null;
+
+    // Validate required fields
+    if (!firstName || !lastName || !email || !phone || !passportNumber || 
+        !passportExpiry || !passportIssuePlace || !dateOfBirth || !nationality || 
+        !gender || !maritalStatus || !address || !emergencyContact || 
+        !emergencyPhone || !destinationCountry || !jobPosition) {
+      
+      await Log.create({
+        logId: uuidv4(),
+        action: "APPLICANT_CREATION_FAILED",
+        userRole: "system",
+        userAgent,
+        details: {
+          error: "Missing required fields",
+          receivedFields: {
+            firstName: !!firstName,
+            lastName: !!lastName,
+            email: !!email,
+            phone: !!phone,
+            passportNumber: !!passportNumber,
+            passportExpiry: !!passportExpiry,
+            passportIssuePlace: !!passportIssuePlace,
+            dateOfBirth: !!dateOfBirth,
+            nationality: !!nationality,
+            gender: !!gender,
+            maritalStatus: !!maritalStatus,
+            address: !!address,
+            emergencyContact: !!emergencyContact,
+            emergencyPhone: !!emergencyPhone,
+            destinationCountry: !!destinationCountry,
+            jobPosition: !!jobPosition,
+          }
+        }
+      });
+
+      return NextResponse.json(
+        { error: "All required fields must be filled" },
+        { status: 400 }
+      );
+    }
+
+    if (!passportScan) {
+      await Log.create({
+        logId: uuidv4(),
+        action: "APPLICANT_CREATION_FAILED",
+        userRole: "system",
+        userAgent,
+        details: {
+          error: "Passport scan is required"
+        }
+      });
+
+      return NextResponse.json(
+        { error: "Passport scan is required" },
+        { status: 400 }
+      );
+    }
+
+    // Check if applicant already exists
+    const existingApplicant = await Applicant.findOne({
+      $or: [{ email }, { passportNumber }],
+    });
+
+    if (existingApplicant) {
+      await Log.create({
+        logId: uuidv4(),
+        action: "APPLICANT_CREATION_FAILED",
+        userRole: "system",
+        userAgent,
+        details: {
+          error: "Duplicate applicant",
+          email,
+          passportNumber
+        }
+      });
+
+      return NextResponse.json(
+        { error: "Applicant with this email or passport number already exists" },
+        { status: 409 }
+      );
+    }
+
+    // Create upload directory
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "applicants");
+    try {
+      await mkdir(uploadDir, { recursive: true });
+    } catch (error) {
+      console.log("Upload directory already exists");
+    }
+
+    // Helper function to save files
+    const saveFile = async (file: File, prefix: string): Promise<string> => {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const fileName = `${prefix}_${Date.now()}${path.extname(file.name)}`;
+      const filePath = path.join(uploadDir, fileName);
+      await writeFile(filePath, buffer);
+      return `/uploads/applicants/${fileName}`;
+    };
+
+    // Save files
+    const passportScanPath = passportScan ? await saveFile(passportScan, "passport") : "";
+    const medicalReportPath = medicalReport ? await saveFile(medicalReport, "medical") : "";
+    const biometricDataPath = biometricData ? await saveFile(biometricData, "biometric") : "";
+
     const applicantData = {
       applicantId: `APP-${uuidv4().substring(0, 8).toUpperCase()}`,
-      firstName: formData.get("firstName") as string,
-      lastName: formData.get("lastName") as string,
-      email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
-      passportNumber: formData.get("passportNumber") as string,
-      passportExpiry: new Date(formData.get("passportExpiry") as string),
-      dateOfBirth: new Date(formData.get("dateOfBirth") as string),
-      nationality: formData.get("nationality") as string,
-      gender: formData.get("gender") as string,
-      address: formData.get("address") as string,
-      destinationCountry: formData.get("destinationCountry") as string,
-      medicalHistory: (formData.get("medicalHistory") as string) || "",
+      firstName,
+      lastName,
+      email,
+      phone,
+      passportNumber,
+      passportExpiry: new Date(passportExpiry),
+      passportIssuePlace,
+      dateOfBirth: new Date(dateOfBirth),
+      nationality,
+      gender,
+      maritalStatus,
+      address,
+      emergencyContact,
+      emergencyPhone,
+      destinationCountry,
+      jobPosition,
+      medicalHistory,
+      passportScan: passportScanPath,
+      medicalReport: medicalReportPath,
+      biometricData: biometricDataPath,
+      status: "pending",
+      paymentStatus: "pending",
     };
 
     const applicant = new Applicant(applicantData);
     await applicant.save();
+    
     await Log.create({
       logId: uuidv4(),
       action: "APPLICANT_CREATED",
@@ -40,10 +181,11 @@ export async function POST(request: NextRequest) {
         email: applicant.email,
         passportNumber: applicant.passportNumber,
         destinationCountry: applicant.destinationCountry,
+        jobPosition: applicant.jobPosition,
         filesUploaded: {
-          passportScan: !!formData.get("passportScan"),
-          medicalReport: !!formData.get("medicalReport"),
-          biometricData: !!formData.get("biometricData")
+          passportScan: !!passportScan,
+          medicalReport: !!medicalReport,
+          biometricData: !!biometricData
         }
       }
     });
@@ -74,6 +216,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 export async function GET(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || 'unknown';
 

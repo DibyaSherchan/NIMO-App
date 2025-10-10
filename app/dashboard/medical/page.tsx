@@ -469,7 +469,7 @@ const MedicalDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex gap-2">
                         <Link
-                          href={`/reports/generate?applicantId=${a.applicantId}&reportId=${a.medicalReport}&edit=true`}
+                          href={`/reports/generate?applicantId=${a.applicantId}`}
                           className={`flex items-center px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
                             a.status === "approved" || a.status === "rejected"
                               ? "bg-gray-300 text-gray-500 cursor-not-allowed"

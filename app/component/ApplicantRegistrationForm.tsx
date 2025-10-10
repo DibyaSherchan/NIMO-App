@@ -205,34 +205,13 @@ const ApplicantRegistrationForm = () => {
 
       if (response.ok) {
         setMessage(
-          `Application submitted successfully! Your Application ID: ${result.applicantId}`
+          `Application submitted successfully! Redirecting to payment...`
         );
-        setFormData({
-          firstName: "",
-          lastName: "",
-          email: "",
-          phone: "",
-          passportNumber: "",
-          passportExpiry: "",
-          passportIssuePlace: "",
-          dateOfBirth: "",
-          nationality: "Nepali",
-          gender: "",
-          maritalStatus: "",
-          address: "",
-          emergencyContact: "",
-          emergencyPhone: "",
-          destinationCountry: "",
-          jobPosition: "",
-          medicalHistory: "",
-          passportScan: null,
-          medicalReport: null,
-          biometricData: null,
-        });
-
+        
+        // Redirect to payment page after 2 seconds
         setTimeout(() => {
-          router.push("/dashboard/foreign");
-        }, 3000);
+          router.push(`/payment?applicantId=${result.applicantId}`);
+        }, 2000);
       } else {
         setMessage(result.error || "Failed to submit application");
       }
@@ -412,7 +391,6 @@ const ApplicantRegistrationForm = () => {
           </div>
         </div>
 
-        {/* Passport Information */}
         <div className="border-b pb-4">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <FileText size={18} className="mr-2" />
@@ -526,7 +504,6 @@ const ApplicantRegistrationForm = () => {
           </div>
         </div>
 
-        {/* Employment Information */}
         <div className="border-b pb-4">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <Briefcase size={18} className="mr-2" />
@@ -585,7 +562,6 @@ const ApplicantRegistrationForm = () => {
           </div>
         </div>
 
-        {/* Emergency Contact */}
         <div className="border-b pb-4">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <Heart size={18} className="mr-2" />
@@ -637,7 +613,6 @@ const ApplicantRegistrationForm = () => {
           </div>
         </div>
 
-        {/* Medical Information */}
         <div className="border-b pb-4">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <Heart size={18} className="mr-2" />
@@ -659,7 +634,6 @@ const ApplicantRegistrationForm = () => {
           </div>
         </div>
 
-        {/* Document Uploads */}
         <div className="pb-4">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <Upload size={18} className="mr-2" />
