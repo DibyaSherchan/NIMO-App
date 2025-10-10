@@ -294,7 +294,7 @@ const EmployeeDashboard = () => {
             No Active Application
           </h2>
           <p className="text-gray-600 mb-6">
-            You don't have any active applications yet. Start a new application to begin
+            You don&apos;t have any active applications yet. Start a new application to begin
             the immigration process.
           </p>
           <Link
