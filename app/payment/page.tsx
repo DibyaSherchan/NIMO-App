@@ -1,17 +1,21 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CreditCard, Smartphone, Banknote, CheckCircle } from "lucide-react";
 
 const PaymentPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const applicantId = searchParams.get("applicantId");
-  
+  const [applicantId, setApplicantId] = useState<string | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
+  useEffect(() => {
+    if (searchParams) {
+      setApplicantId(searchParams.get("applicantId"));
+    }
+  }, [searchParams]);
 
   const handlePaymentMethodSelect = (method: string) => {
     setSelectedMethod(method);
@@ -109,6 +113,16 @@ const PaymentPage = () => {
       handleCashOrCardPayment();
     }
   };
+  if (applicantId === null) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading payment page...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!applicantId) {
     return (
