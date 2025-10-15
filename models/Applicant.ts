@@ -3,14 +3,15 @@ import crypto from "crypto";
 import { customAlphabet } from "nanoid";
 
 const nanoid = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 10);
-const ENC_SECRET = process.env.ENCRYPTION_SECRET || "default_secret_key_32_characters";
+const ENC_SECRET =
+  process.env.ENCRYPTION_SECRET || "default_secret_key_32_characters";
 const ENC_ALGO = "aes-256-cbc";
 const IV_LENGTH = 16;
 
 function encrypt(text: string): string {
   if (!text) return "";
   const iv = crypto.randomBytes(IV_LENGTH);
-  const key = Buffer.from(ENC_SECRET.padEnd(32, '0').substring(0, 32));
+  const key = Buffer.from(ENC_SECRET.padEnd(32, "0").substring(0, 32));
   const cipher = crypto.createCipheriv(ENC_ALGO, key, iv);
   let encrypted = cipher.update(text, "utf8", "hex");
   encrypted += cipher.final("hex");
@@ -25,7 +26,7 @@ function decrypt(text: string): string {
       if (textParts.length === 2) {
         const iv = Buffer.from(textParts[0], "hex");
         const encryptedText = textParts[1];
-        const key = Buffer.from(ENC_SECRET.padEnd(32, '0').substring(0, 32));
+        const key = Buffer.from(ENC_SECRET.padEnd(32, "0").substring(0, 32));
         const decipher = crypto.createDecipheriv(ENC_ALGO, key, iv);
         let decrypted = decipher.update(encryptedText, "hex", "utf8");
         decrypted += decipher.final("utf8");
@@ -81,13 +82,16 @@ const ApplicantSchema: Schema<IApplicant> = new Schema(
     },
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: {
+      type: String,
+      required: true,
+      index: true,
+    },
     phone: { type: String, required: true },
     passportNumber: {
       type: String,
       required: true,
-      unique: true,
-      index: true,
+      index: true, 
       get: decrypt,
       set: encrypt,
     },
@@ -169,6 +173,18 @@ const ApplicantSchema: Schema<IApplicant> = new Schema(
     timestamps: true,
     toJSON: { getters: true },
     toObject: { getters: true },
+  }
+);
+ApplicantSchema.index(
+  {
+    email: 1,
+    passportNumber: 1,
+    destinationCountry: 1,
+    jobPosition: 1,
+    createdAt: 1,
+  },
+  {
+    name: "application_tracking",
   }
 );
 

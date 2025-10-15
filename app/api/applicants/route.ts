@@ -93,29 +93,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if applicant already exists
-    const existingApplicant = await Applicant.findOne({
-      $or: [{ email }, { passportNumber }],
-    });
-
-    if (existingApplicant) {
-      await Log.create({
-        logId: uuidv4(),
-        action: "APPLICANT_CREATION_FAILED",
-        userRole: "system",
-        userAgent,
-        details: {
-          error: "Duplicate applicant",
-          email,
-          passportNumber
-        }
-      });
-
-      return NextResponse.json(
-        { error: "Applicant with this email or passport number already exists" },
-        { status: 409 }
-      );
-    }
+    // REMOVED: Duplicate check - now allows multiple applications per email
+    // Users can submit multiple applications for different jobs/countries
+    // Each application gets a unique applicantId
 
     // Create upload directory
     const uploadDir = path.join(process.cwd(), "public", "uploads", "applicants");

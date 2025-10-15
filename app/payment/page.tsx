@@ -136,7 +136,7 @@ function PaymentContent() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
+    <div className="my-20 w-full p-6 bg-white text-black rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6 flex items-center">
         <CheckCircle className="mr-2 text-green-600" size={24} />
         Complete Your Payment
@@ -172,7 +172,7 @@ function PaymentContent() {
         >
           <div className="flex items-center">
             <Smartphone className="mr-3 text-blue-600" size={24} />
-            <div className="flex-1">
+            <div className="flex-1">  
               <h4 className="font-semibold">QR Code / PhonePay</h4>
               <p className="text-sm text-gray-600">Scan QR code and pay instantly</p>
             </div>
@@ -182,7 +182,7 @@ function PaymentContent() {
             <div className="mt-4 space-y-4">
               <div className="bg-white p-4 rounded border border-gray-300 flex justify-center">
                 <img
-                  src="https://placehold.co/300x300/png?text=QR+Code+Here"
+                  src="/qr.jpg"
                   alt="QR Code"
                   className="w-64 h-64"
                 />
