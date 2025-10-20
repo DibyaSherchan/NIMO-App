@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { connectDB } from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
@@ -30,11 +28,6 @@ export async function POST(request: NextRequest) {
     const destinationCountry = formData.get("destinationCountry") as string;
     const jobPosition = formData.get("jobPosition") as string;
     const medicalHistory = formData.get("medicalHistory") as string || "";
-
-    // Files
-    const passportScan = formData.get("passportScan") as File;
-    const medicalReport = formData.get("medicalReport") as File | null;
-    const biometricData = formData.get("biometricData") as File | null;
 
     // Validate required fields
     if (!firstName || !lastName || !email || !phone || !passportNumber || 
@@ -76,45 +69,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!passportScan) {
-      await Log.create({
-        logId: uuidv4(),
-        action: "APPLICANT_CREATION_FAILED",
-        userRole: "system",
-        userAgent,
-        details: {
-          error: "Passport scan is required"
-        }
-      });
-
-      return NextResponse.json(
-        { error: "Passport scan is required" },
-        { status: 400 }
-      );
-    }
-    // Create upload directory
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "applicants");
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (error) {
-      console.log("Upload directory already exists");
-    }
-
-    // Helper function to save files
-    const saveFile = async (file: File, prefix: string): Promise<string> => {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const fileName = `${prefix}_${Date.now()}${path.extname(file.name)}`;
-      const filePath = path.join(uploadDir, fileName);
-      await writeFile(filePath, buffer);
-      return `/uploads/applicants/${fileName}`;
-    };
-
-    // Save files
-    const passportScanPath = passportScan ? await saveFile(passportScan, "passport") : "";
-    const medicalReportPath = medicalReport ? await saveFile(medicalReport, "medical") : "";
-    const biometricDataPath = biometricData ? await saveFile(biometricData, "biometric") : "";
-
     const applicantData = {
       applicantId: `APP-${uuidv4().substring(0, 8).toUpperCase()}`,
       firstName,
@@ -134,9 +88,6 @@ export async function POST(request: NextRequest) {
       destinationCountry,
       jobPosition,
       medicalHistory,
-      passportScan: passportScanPath,
-      medicalReport: medicalReportPath,
-      biometricData: biometricDataPath,
       status: "pending",
       paymentStatus: "pending",
     };
@@ -157,11 +108,6 @@ export async function POST(request: NextRequest) {
         passportNumber: applicant.passportNumber,
         destinationCountry: applicant.destinationCountry,
         jobPosition: applicant.jobPosition,
-        filesUploaded: {
-          passportScan: !!passportScan,
-          medicalReport: !!medicalReport,
-          biometricData: !!biometricData
-        }
       }
     });
 
