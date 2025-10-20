@@ -92,11 +92,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // REMOVED: Duplicate check - now allows multiple applications per email
-    // Users can submit multiple applications for different jobs/countries
-    // Each application gets a unique applicantId
-
     // Create upload directory
     const uploadDir = path.join(process.cwd(), "public", "uploads", "applicants");
     try {
