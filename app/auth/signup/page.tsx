@@ -5,11 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 
-// Create a wrapper component that handles the search params
 function SignUpContent() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    region: "",
     password: "",
     confirmPassword: "",
     role: "",
@@ -60,11 +60,19 @@ function SignUpContent() {
     setLoading(true);
     setError("");
     setSuccess("");
+    
     if (!formData.role) {
       setError("Please select an account type");
       setLoading(false);
       return;
     }
+
+    if (!formData.region) {
+      setError("Please select a region");
+      setLoading(false);
+      return;
+    }
+
     if (!isGoogleSignup) {
       if (formData.password !== formData.confirmPassword) {
         setError("Passwords do not match");
@@ -96,6 +104,7 @@ function SignUpContent() {
         body: JSON.stringify({
           name: formData.name.trim(),
           email: formData.email.toLowerCase(),
+          region: formData.region,
           password: isGoogleSignup ? undefined : formData.password,
           role: formData.role,
           isGoogleSignup,
@@ -199,6 +208,25 @@ function SignUpContent() {
             </div>
 
             <div>
+              <label htmlFor="region" className="block text-sm font-medium text-gray-700">
+                Region *
+              </label>
+              <select
+                id="region"
+                name="region"
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                value={formData.region}
+                onChange={handleChange}
+              >
+                <option value="">Select your region</option>
+                <option value="Central">Central Region</option>
+                <option value="Eastern">Eastern Region</option>
+                <option value="Western">Western Region</option>
+              </select>
+            </div>
+
+            <div>
               <label 
                 htmlFor="role" 
                 className="block text-sm font-medium text-gray-700 cursor-pointer select-none"
@@ -216,7 +244,6 @@ function SignUpContent() {
               >
                 <option value="">Select your account type</option>
                 <option value="ForeignEmployee">Foreign Employee</option>
-                <option value="Agent">Agent</option>
                 <option value="MedicalOrganization">Medical Organization</option>
                 {showAdminOption && (
                   <option value="Admin">Admin</option>
@@ -334,8 +361,6 @@ function SignUpContent() {
     </div>
   );
 }
-
-// Main export component with Suspense boundary
 export default function SignUp() {
   return (
     <Suspense fallback={

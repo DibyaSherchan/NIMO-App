@@ -12,6 +12,12 @@ const userSchema = new mongoose.Schema(
       unique: true,
       index: true,
     },
+    region: {
+      type: String,
+      required: true,
+      enum: ["Central", "Eastern", "Western"],
+      index: true,
+    },
     password: {
       type: String,
       required: false,
@@ -53,7 +59,9 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
 userSchema.index({ email: 1, role: 1 });
+userSchema.index({ region: 1, role: 1 });
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 

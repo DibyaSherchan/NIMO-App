@@ -68,6 +68,8 @@ export interface IApplicant extends Document {
   paymentStatus: string;
   paymentProof?: string;
   paymentVerifiedAt?: Date;
+  region: string; // NEW: Track which region registered this applicant
+  registeredBy?: string; // NEW: Optional - track which user/agent registered
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,7 +87,6 @@ const ApplicantSchema: Schema<IApplicant> = new Schema(
     email: {
       type: String,
       required: true,
-      index: true,
     },
     phone: { type: String, required: true },
     passportNumber: {
@@ -168,6 +169,17 @@ const ApplicantSchema: Schema<IApplicant> = new Schema(
       type: Date,
       default: null,
     },
+    region: {
+      type: String,
+      required: true,
+      enum: ["Central", "Eastern", "Western"],
+      index: true,
+    },
+    registeredBy: {
+      type: String,
+      default: "",
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -181,12 +193,14 @@ ApplicantSchema.index(
     passportNumber: 1,
     destinationCountry: 1,
     jobPosition: 1,
+    region: 1,
     createdAt: 1,
   },
   {
     name: "application_tracking",
   }
 );
+ApplicantSchema.index({ region: 1, status: 1 });
 
 export default mongoose.models.Applicant ||
   mongoose.model<IApplicant>("Applicant", ApplicantSchema);

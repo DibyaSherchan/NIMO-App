@@ -1,14 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
+import { getServerSession } from "next-auth/next";
 import { connectDB } from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
+import User from "@/models/User";
 import Log from "@/models/Log";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
-  const userAgent = request.headers.get('user-agent') || 'unknown';
+  const userAgent = request.headers.get("user-agent") || "unknown";
 
   try {
     await connectDB();
+
+    // Get authenticated user session
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user?.email) {
+      await Log.create({
+        logId: uuidv4(),
+        action: "APPLICANT_CREATION_FAILED",
+        userRole: "system",
+        userAgent,
+        details: {
+          error: "Unauthorized - No active session",
+        },
+      });
+
+      return NextResponse.json(
+        { error: "Unauthorized. Please log in to submit an application." },
+        { status: 401 }
+      );
+    }
+
+    // Fetch the user's region from the database
+    const user = await User.findOne({ email: session.user.email });
+
+    if (!user || !user.region) {
+      await Log.create({
+        logId: uuidv4(),
+        action: "APPLICANT_CREATION_FAILED",
+        userRole: user?.role || "unknown",
+        userAgent,
+        details: {
+          error: "User region not found",
+          userEmail: session.user.email,
+        },
+      });
+
+      return NextResponse.json(
+        { error: "User region not found. Please contact administrator." },
+        { status: 400 }
+      );
+    }
 
     const formData = await request.formData();
     const firstName = formData.get("firstName") as string;
@@ -27,21 +71,60 @@ export async function POST(request: NextRequest) {
     const emergencyPhone = formData.get("emergencyPhone") as string;
     const destinationCountry = formData.get("destinationCountry") as string;
     const jobPosition = formData.get("jobPosition") as string;
-    const medicalHistory = formData.get("medicalHistory") as string || "";
+    const medicalHistory = (formData.get("medicalHistory") as string) || "";
 
-    // Validate required fields
-    if (!firstName || !lastName || !email || !phone || !passportNumber || 
-        !passportExpiry || !passportIssuePlace || !dateOfBirth || !nationality || 
-        !gender || !maritalStatus || !address || !emergencyContact || 
-        !emergencyPhone || !destinationCountry || !jobPosition) {
-      
+    // Check for duplicate passport number (not email - allow multiple apps per email)
+    const existingApplicant = await Applicant.findOne({
+      passportNumber: passportNumber,
+    });
+
+    if (existingApplicant) {
       await Log.create({
         logId: uuidv4(),
         action: "APPLICANT_CREATION_FAILED",
-        userRole: "system",
+        userRole: user.role,
+        userAgent,
+        details: {
+          error: "Duplicate passport number",
+          passportNumber: passportNumber,
+          region: user.region,
+        },
+      });
+
+      return NextResponse.json(
+        { error: "An application with this passport number already exists" },
+        { status: 400 }
+      );
+    }
+
+    // Validate required fields
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !phone ||
+      !passportNumber ||
+      !passportExpiry ||
+      !passportIssuePlace ||
+      !dateOfBirth ||
+      !nationality ||
+      !gender ||
+      !maritalStatus ||
+      !address ||
+      !emergencyContact ||
+      !emergencyPhone ||
+      !destinationCountry ||
+      !jobPosition
+    ) {
+      await Log.create({
+        logId: uuidv4(),
+        action: "APPLICANT_CREATION_FAILED",
+        userRole: user.role,
         userAgent,
         details: {
           error: "Missing required fields",
+          region: user.region,
+          registeredBy: user.email,
           receivedFields: {
             firstName: !!firstName,
             lastName: !!lastName,
@@ -59,8 +142,8 @@ export async function POST(request: NextRequest) {
             emergencyPhone: !!emergencyPhone,
             destinationCountry: !!destinationCountry,
             jobPosition: !!jobPosition,
-          }
-        }
+          },
+        },
       });
 
       return NextResponse.json(
@@ -90,15 +173,24 @@ export async function POST(request: NextRequest) {
       medicalHistory,
       status: "pending",
       paymentStatus: "pending",
+      region: user.region,
+      registeredBy: user.email,
     };
 
     const applicant = new Applicant(applicantData);
+    console.log("Applicant data before save:", applicantData);
+    console.log("Applicant instance region:", applicant.region);
+    console.log("Applicant instance registeredBy:", applicant.registeredBy);
+
     await applicant.save();
-    
+
+    const savedApplicant = await Applicant.findById(applicant._id);
+    console.log("Saved applicant from DB:", savedApplicant.toObject());
+
     await Log.create({
       logId: uuidv4(),
       action: "APPLICANT_CREATED",
-      userRole: "system",
+      userRole: user.role,
       userAgent,
       details: {
         applicantId: applicant.applicantId,
@@ -108,7 +200,9 @@ export async function POST(request: NextRequest) {
         passportNumber: applicant.passportNumber,
         destinationCountry: applicant.destinationCountry,
         jobPosition: applicant.jobPosition,
-      }
+        region: applicant.region,
+        registeredBy: applicant.registeredBy,
+      },
     });
 
     return NextResponse.json(
@@ -127,8 +221,8 @@ export async function POST(request: NextRequest) {
       userAgent,
       details: {
         error: error instanceof Error ? error.message : "Unknown error",
-        errorStack: error instanceof Error ? error.stack : undefined
-      }
+        errorStack: error instanceof Error ? error.stack : undefined,
+      },
     });
 
     return NextResponse.json(
@@ -139,20 +233,57 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const userAgent = request.headers.get('user-agent') || 'unknown';
+  const userAgent = request.headers.get("user-agent") || "unknown";
 
   try {
     await connectDB();
-    const applicants = await Applicant.find({}, "-__v").sort({ createdAt: -1 });
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await User.findOne({ email: session.user.email });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    
+    let query: any = {};
+
+    if (user.role === "Admin") {
+      // Admin sees all applicants
+      query = {};
+    } else if (user.role === "Agent") {
+      // Agent sees only their region
+      query = { region: user.region };
+    } else if (user.role === "MedicalOrganization") {
+      // Medical Organization sees only their region
+      query = { region: user.region };
+    } else if (user.role === "ForeignEmployee") {
+      // Foreign Employee sees only their own applications
+      query = { registeredBy: user.email };
+    } else {
+      // Default: user sees only their own applications
+      query = { registeredBy: user.email };
+    }
+
+    const applicants = await Applicant.find(query, "-__v").sort({
+      createdAt: -1,
+    });
+
     await Log.create({
       logId: uuidv4(),
       action: "APPLICANTS_FETCHED",
-      userRole: "system", 
+      userRole: user.role,
       userAgent,
       details: {
         count: applicants.length,
-        timestamp: new Date().toISOString()
-      }
+        region: user.region,
+        userEmail: user.email,
+        filterApplied: JSON.stringify(query),
+        timestamp: new Date().toISOString(),
+      },
     });
 
     return NextResponse.json(applicants, { status: 200 });
@@ -164,8 +295,8 @@ export async function GET(request: NextRequest) {
       userRole: "system",
       userAgent,
       details: {
-        error: error instanceof Error ? error.message : "Unknown error"
-      }
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
     });
 
     return NextResponse.json(

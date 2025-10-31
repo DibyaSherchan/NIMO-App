@@ -4,13 +4,10 @@ import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import Log from "@/models/Log";
 
-// Define interface for MongoDB duplicate key error
 interface MongoError extends Error {
   code?: number;
   keyValue?: Record<string, unknown>;
 }
-
-// Type guard to check if error is a MongoError
 function isMongoError(error: unknown): error is MongoError {
   return (
     typeof error === 'object' &&
@@ -23,9 +20,11 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || 'unknown';
 
   try {
-    const { name, email, password, role } = await request.json();
+    const { name, email, password, role, region } = await request.json();
+
+    console.log('Received data:', { name, email, role, region });
     
-    if (!name || !email || !password || !role) {
+    if (!name || !email || !password || !role || !region) {
       await Log.create({
         logId: crypto.randomUUID(),
         action: "USER_REGISTER_FAILURE",
@@ -35,7 +34,7 @@ export async function POST(request: NextRequest) {
         details: {
           reason: "MISSING_FIELDS",
           error: "All fields are required",
-          attemptedData: { name: !!name, email: !!email, password: !!password, role: !!role }
+          attemptedData: { name: !!name, email: !!email, password: !!password, role: !!role, region: !!region }
         }
       });
       
@@ -112,6 +111,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const validRegions = ["Central", "Eastern", "Western"];
+    if (!validRegions.includes(region)) {
+      await Log.create({
+        logId: crypto.randomUUID(),
+        action: "USER_REGISTER_FAILURE",
+        userId: null,
+        userRole: "anonymous",
+        userAgent,
+        details: {
+          reason: "INVALID_REGION",
+          error: "Invalid region specified",
+          attemptedRegion: region
+        }
+      });
+      
+      return NextResponse.json(
+        { error: "Invalid region specified" },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     
@@ -143,6 +163,7 @@ export async function POST(request: NextRequest) {
       email: email.toLowerCase(),
       password: hashedPassword,
       role: role,
+      region: region,
       createdAt: new Date(),
     });
 
@@ -156,7 +177,8 @@ export async function POST(request: NextRequest) {
       details: {
         email: newUser.email,
         registrationMethod: "form",
-        assignedRole: newUser.role
+        assignedRole: newUser.role,
+        region: newUser.region
       }
     });
     
@@ -168,6 +190,7 @@ export async function POST(request: NextRequest) {
           name: newUser.name,
           email: newUser.email,
           role: newUser.role,
+          region: newUser.region,
         },
       },
       { status: 201 }

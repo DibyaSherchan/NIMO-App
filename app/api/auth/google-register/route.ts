@@ -7,8 +7,9 @@ export async function POST(request: Request) {
   const userAgent = request.headers.get('user-agent') || 'unknown';
 
   try {
-    const { name, email, role } = await request.json();
-    if (!name || !email || !role) {
+    const { name, email, role, region } = await request.json();
+    
+    if (!name || !email || !role || !region) {
       await Log.create({
         logId: crypto.randomUUID(),
         action: "USER_REGISTER_FAILURE",
@@ -17,18 +18,18 @@ export async function POST(request: Request) {
         userAgent,
         details: {
           reason: "MISSING_FIELDS",
-          error: "Name, email, and role are required",
-          attemptedData: { name: !!name, email: !!email, role: !!role }
+          error: "Name, email, role, and region are required",
+          attemptedData: { name: !!name, email: !!email, role: !!role, region: !!region }
         }
       });
       
       return NextResponse.json(
-        { error: "Name, email, and role are required" },
+        { error: "Name, email, role, and region are required" },
         { status: 400 }
       );
     }
 
-    if (!['ForeignEmployee', 'Agent', 'MedicalOrganization'].includes(role)) {
+    if (!['ForeignEmployee', 'Agent', 'MedicalOrganization', 'Admin'].includes(role)) {
       await Log.create({
         logId: crypto.randomUUID(),
         action: "USER_REGISTER_FAILURE",
@@ -48,8 +49,30 @@ export async function POST(request: Request) {
       );
     }
 
+    const validRegions = ["Central", "Eastern", "Western"];
+    if (!validRegions.includes(region)) {
+      await Log.create({
+        logId: crypto.randomUUID(),
+        action: "USER_REGISTER_FAILURE",
+        userId: null,
+        userRole: "anonymous",
+        userAgent,
+        details: {
+          reason: "INVALID_REGION",
+          error: "Invalid region specified",
+          attemptedRegion: region
+        }
+      });
+      
+      return NextResponse.json(
+        { error: "Invalid region specified" },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
     const existingUser = await User.findOne({ email: email.toLowerCase() });
+    
     if (existingUser) {
       await Log.create({
         logId: crypto.randomUUID(),
@@ -69,10 +92,12 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    
     const user = new User({
       name: name.trim(),
       email: email.toLowerCase(),
       role,
+      region,
       authProvider: 'google',
       password: null,
       isActive: true,
@@ -89,6 +114,7 @@ export async function POST(request: Request) {
         email: user.email,
         registrationMethod: "google_oauth",
         assignedRole: user.role,
+        region: user.region,
         authProvider: "google"
       }
     });
@@ -100,7 +126,8 @@ export async function POST(request: Request) {
           id: user._id.toString(),
           name: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          region: user.region
         }
       },
       { status: 201 }
