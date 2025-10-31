@@ -207,8 +207,6 @@ const ApplicantRegistrationForm = () => {
         setMessage(
           `Application submitted successfully! Redirecting to payment...`
         );
-        
-        // Redirect to payment page after 2 seconds
         setTimeout(() => {
           router.push(`/payment?applicantId=${result.applicantId}`);
         }, 2000);

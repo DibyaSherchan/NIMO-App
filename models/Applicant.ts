@@ -68,8 +68,8 @@ export interface IApplicant extends Document {
   paymentStatus: string;
   paymentProof?: string;
   paymentVerifiedAt?: Date;
-  region: string; // NEW: Track which region registered this applicant
-  registeredBy?: string; // NEW: Optional - track which user/agent registered
+  region: string;
+  registeredBy?: string;
   createdAt: Date;
   updatedAt: Date;
 }

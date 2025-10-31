@@ -12,8 +12,6 @@ export async function POST(request: NextRequest) {
 
   try {
     await connectDB();
-
-    // Get authenticated user session
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user?.email) {
@@ -32,8 +30,6 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-
-    // Fetch the user's region from the database
     const user = await User.findOne({ email: session.user.email });
 
     if (!user || !user.region) {
@@ -72,8 +68,6 @@ export async function POST(request: NextRequest) {
     const destinationCountry = formData.get("destinationCountry") as string;
     const jobPosition = formData.get("jobPosition") as string;
     const medicalHistory = (formData.get("medicalHistory") as string) || "";
-
-    // Check for duplicate passport number (not email - allow multiple apps per email)
     const existingApplicant = await Applicant.findOne({
       passportNumber: passportNumber,
     });
@@ -96,8 +90,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Validate required fields
     if (
       !firstName ||
       !lastName ||
@@ -248,23 +240,22 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+    type ApplicantQuery = {
+      region?: string;
+      registeredBy?: string;
+    };
     
-    let query: any = {};
+    let query: ApplicantQuery = {};
 
     if (user.role === "Admin") {
-      // Admin sees all applicants
       query = {};
     } else if (user.role === "Agent") {
-      // Agent sees only their region
       query = { region: user.region };
     } else if (user.role === "MedicalOrganization") {
-      // Medical Organization sees only their region
       query = { region: user.region };
     } else if (user.role === "ForeignEmployee") {
-      // Foreign Employee sees only their own applications
       query = { registeredBy: user.email };
     } else {
-      // Default: user sees only their own applications
       query = { registeredBy: user.email };
     }
 
