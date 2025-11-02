@@ -18,6 +18,10 @@ import {
   Download,
   AlertCircle,
   LogOut,
+  UserPlus,
+  CheckCircle,
+  XCircle,
+  Clock,
 } from "lucide-react";
 import {
   LineChart,
@@ -29,181 +33,102 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import { signOut } from "next-auth/react";
 import AdminApplicantPage from "@/app/component/AdminApplicantPage";
 import AdminMedicalReportsPage from "@/app/component/AdminMedicalPage";
 
-interface LogData {
-  _id: string;
-  logId: string;
-  action: string;
-  userId?: string;
-  userRole: string;
-  userAgent: string;
-  details: Record<string, unknown> | null;
-  timestamp: string;
+interface DashboardStats {
+  totalUsers: number;
+  totalApplicants: number;
+  activeUsers: number;
+  pendingApplicants: number;
+  approvedApplicants: number;
+  rejectedApplicants: number;
+  userGrowth: { date: string; count: number }[];
+  applicantGrowth: { date: string; count: number }[];
+  applicantStatusDistribution: { status: string; count: number }[];
+  userRoleDistribution: { role: string; count: number }[];
+  regionalDistribution: { region: string; count: number }[];
+  recentApplicants: any[];
+  monthlyApplications: { month: string; count: number }[];
 }
 
-interface DashboardStats {
-  totalLogs: number;
-  uniqueUsers: number;
-  topActions: { action: string; count: number }[];
-  roleDistribution: { role: string; count: number }[];
-  recentLogs: LogData[];
-  activityTrend: { date: string; count: number }[];
-}
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const AdminDashboard = () => {
-  const [logs, setLogs] = useState<LogData[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTimeRange, setSelectedTimeRange] = useState("7d");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedAction, setSelectedAction] = useState("all");
   const [activeTab, setActiveTab] = useState("dashboard");
 
   useEffect(() => {
     if (activeTab === "dashboard") {
-      fetchLogs();
+      fetchDashboardStats();
     }
   }, [selectedTimeRange, activeTab]);
 
-  const fetchLogs = async () => {
+  const fetchDashboardStats = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/logs?timeRange=${selectedTimeRange}`);
+      const response = await fetch(`/api/admin/stats?timeRange=${selectedTimeRange}`);
       const data = await response.json();
-      setLogs(data.logs);
-      calculateStats(data.logs);
+      setStats(data);
     } catch (error) {
-      console.error("Error fetching logs:", error);
+      console.error("Error fetching dashboard stats:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateStats = (logsData: LogData[]) => {
-    const uniqueUsers = new Set(
-      logsData.filter((log) => log.userId).map((log) => log.userId)
-    ).size;
-
-    const actionCounts = logsData.reduce((acc, log) => {
-      acc[log.action] = (acc[log.action] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const roleCounts = logsData.reduce((acc, log) => {
-      acc[log.userRole] = (acc[log.userRole] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const topActions = Object.entries(actionCounts)
-      .map(([action, count]) => ({ action, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-
-    const roleDistribution = Object.entries(roleCounts).map(
-      ([role, count]) => ({ role, count })
-    );
-
-    const activityTrend = logsData.reduce((acc, log) => {
-      const date = new Date(log.timestamp).toISOString().split("T")[0];
-      acc[date] = (acc[date] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const trendData = Object.entries(activityTrend)
-      .map(([date, count]) => ({ date, count }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    setStats({
-      totalLogs: logsData.length,
-      uniqueUsers,
-      topActions,
-      roleDistribution,
-      recentLogs: logsData.slice(0, 10),
-      activityTrend: trendData,
-    });
-  };
-
-  const filteredLogs = logs.filter((log) => {
-    const matchesSearch =
-      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.userRole.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.logId.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesAction =
-      selectedAction === "all" || log.action === selectedAction;
-    return matchesSearch && matchesAction;
-  });
-
   const formatTimestamp = (timestamp: string) => {
     return new Date(timestamp).toLocaleString();
   };
 
-  const getActionBadgeColor = (action: string) => {
+  const getStatusBadgeColor = (status: string) => {
     const colors = {
-      login: "bg-green-100 text-green-800",
-      logout: "bg-red-100 text-red-800",
-      create: "bg-blue-100 text-blue-800",
-      update: "bg-yellow-100 text-yellow-800",
-      delete: "bg-red-100 text-red-800",
-      view: "bg-gray-100 text-gray-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      under_review: "bg-blue-100 text-blue-800",
+      verified: "bg-purple-100 text-purple-800",
+      approved: "bg-green-100 text-green-800",
+      rejected: "bg-red-100 text-red-800",
     };
-    return colors[action as keyof typeof colors] || "bg-gray-100 text-gray-800";
+    return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
 
-  const exportLogs = () => {
-    const csvContent = [
-      ["Log ID", "Action", "User Role", "Timestamp", "Details"],
-      ...filteredLogs.map((log) => [
-        log.logId,
-        log.action,
-        log.userRole,
-        formatTimestamp(log.timestamp),
-        JSON.stringify(log.details),
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `admin-logs-${new Date().toISOString().split("T")[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+  const getPaymentStatusBadgeColor = (status: string) => {
+    const colors = {
+      pending: "bg-yellow-100 text-yellow-800",
+      pending_verification: "bg-blue-100 text-blue-800",
+      pending_reception: "bg-orange-100 text-orange-800",
+      verified: "bg-purple-100 text-purple-800",
+      completed: "bg-green-100 text-green-800",
+    };
+    return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
 
-  const salesData = [
-    { month: "20k", sales: 20, profit: 15 },
-    { month: "30k", sales: 30, profit: 25 },
-    { month: "40k", sales: 65, profit: 45 },
-    { month: "50k", sales: 45, profit: 35 },
-    { month: "60k", sales: 85, profit: 65 },
-    { month: "70k", sales: 55, profit: 40 },
-    { month: "80k", sales: 75, profit: 55 },
-    { month: "90k", sales: 90, profit: 70 },
-    { month: "100k", sales: 85, profit: 65 },
-  ];
-
-  const registrationTrend = [
-    { year: "2015", count: 20 },
-    { year: "2016", count: 45 },
-    { year: "2017", count: 65 },
-    { year: "2018", count: 40 },
-    { year: "2019", count: 95 },
-  ];
-
-  const revenueData = [
-    { name: "Q1", value: 25 },
-    { name: "Q2", value: 45 },
-    { name: "Q3", value: 85 },
-    { name: "Q4", value: 30 },
-  ];
+  const exportApplicants = async () => {
+    try {
+      const response = await fetch('/api/admin/export-applicants');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `applicants-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting applicants:', error);
+    }
+  };
 
   const sidebarItems = [
     { id: "dashboard", label: "HOME", icon: Home },
@@ -294,7 +219,8 @@ const AdminDashboard = () => {
       <div className="p-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+            <p className="text-gray-600">System overview and analytics</p>
           </div>
           <div className="flex items-center space-x-4">
             <select
@@ -302,23 +228,11 @@ const AdminDashboard = () => {
               onChange={(e) => setSelectedTimeRange(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
             >
-              <option value="1d">Last 24 hours</option>
               <option value="7d">Last 7 days</option>
               <option value="30d">Last 30 days</option>
               <option value="90d">Last 90 days</option>
+              <option value="1y">Last 1 year</option>
             </select>
-            <div className="relative">
-              <MapPin
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={16}
-              />
-              <select className="pl-10 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option>Select Location</option>
-                <option>Japan</option>
-                <option>USA</option>
-                <option>Europe</option>
-              </select>
-            </div>
             <div className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg">
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                 <span className="text-sm font-semibold">NM</span>
@@ -333,17 +247,17 @@ const AdminDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">Total Logs</p>
+                <p className="text-gray-600 text-sm">Total Users</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {stats?.totalLogs || 0}
+                  {stats?.totalUsers || 0}
                 </p>
                 <div className="flex items-center text-green-600 text-sm mt-2">
-                  <TrendingUp size={14} className="mr-1" />
-                  <span>All time</span>
+                  <Users size={14} className="mr-1" />
+                  <span>{stats?.activeUsers || 0} active</span>
                 </div>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <Activity className="text-blue-600" size={24} />
+                <Users className="text-blue-600" size={24} />
               </div>
             </div>
           </div>
@@ -351,32 +265,17 @@ const AdminDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">Unique Users</p>
+                <p className="text-gray-600 text-sm">Total Applicants</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {stats?.uniqueUsers || 0}
+                  {stats?.totalApplicants || 0}
                 </p>
                 <div className="flex items-center text-blue-600 text-sm mt-2">
-                  <Users size={14} className="mr-1" />
-                  <span>Active users</span>
-                </div>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                <Users className="text-yellow-600" size={24} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm">Total Sales</p>
-                <p className="text-2xl font-bold text-gray-900">89,000</p>
-                <div className="flex items-center text-red-600 text-sm mt-2">
-                  <span>4.3% Down from yesterday</span>
+                  <UserPlus size={14} className="mr-1" />
+                  <span>{stats?.pendingApplicants || 0} pending</span>
                 </div>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <BarChart3 className="text-green-600" size={24} />
+                <UserPlus className="text-green-600" size={24} />
               </div>
             </div>
           </div>
@@ -384,15 +283,35 @@ const AdminDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm">Total Expense</p>
-                <p className="text-2xl font-bold text-gray-900">50,000</p>
+                <p className="text-gray-600 text-sm">Approved</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {stats?.approvedApplicants || 0}
+                </p>
                 <div className="flex items-center text-green-600 text-sm mt-2">
-                  <TrendingUp size={14} className="mr-1" />
-                  <span>1.8% Up from yesterday</span>
+                  <CheckCircle size={14} className="mr-1" />
+                  <span>Applications</span>
+                </div>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="text-green-600" size={24} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Rejected</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {stats?.rejectedApplicants || 0}
+                </p>
+                <div className="flex items-center text-red-600 text-sm mt-2">
+                  <XCircle size={14} className="mr-1" />
+                  <span>Applications</span>
                 </div>
               </div>
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <DollarSign className="text-red-600" size={24} />
+                <XCircle className="text-red-600" size={24} />
               </div>
             </div>
           </div>
@@ -402,88 +321,105 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white p-6 rounded-xl shadow-sm border">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Sales</h3>
+              <h3 className="text-lg font-semibold text-gray-900">User Growth</h3>
               <select className="text-sm border border-gray-200 rounded-lg px-3 py-1 focus:outline-none text-black">
-                <option>October</option>
-                <option>November</option>
-                <option>December</option>
+                <option>All Time</option>
+                <option>Last Year</option>
+                <option>Last Quarter</option>
               </select>
             </div>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesData}>
+                <AreaChart data={stats?.userGrowth || []}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
+                  <XAxis dataKey="date" />
                   <YAxis />
                   <Tooltip />
                   <Area
                     type="monotone"
-                    dataKey="sales"
-                    stackId="1"
-                    stroke="#8b5cf6"
-                    fill="#c4b5fd"
-                    fillOpacity={0.6}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="profit"
-                    stackId="1"
-                    stroke="#f97316"
-                    fill="#fb923c"
+                    dataKey="count"
+                    stroke="#3b82f6"
+                    fill="#93c5fd"
                     fillOpacity={0.6}
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
-            <div className="flex justify-center space-x-6 mt-4">
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-purple-400 rounded-full mr-2"></div>
-                <span className="text-sm text-gray-600">Sales</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-orange-400 rounded-full mr-2"></div>
-                <span className="text-sm text-gray-600">Profit</span>
-              </div>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-xl shadow-sm border">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-semibold text-gray-900">
-                Total Registered Applicants
+                Applicant Status Distribution
               </h3>
-              <select className="text-sm border border-gray-200 rounded-lg px-3 py-1 focus:outline-none text-black">
-                <option>October</option>
-                <option>November</option>
-                <option>December</option>
-              </select>
             </div>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={registrationTrend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="year" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
+                <PieChart>
+                  <Pie
+                    data={stats?.applicantStatusDistribution || []}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ status, count }) => `${status}: ${count}`}
+                    outerRadius={80}
+                    fill="#8884d8"
                     dataKey="count"
-                    stroke="#3b82f6"
-                    strokeWidth={3}
-                    dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
-                  />
-                </LineChart>
+                  >
+                    {(stats?.applicantStatusDistribution || []).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
               </ResponsiveContainer>
             </div>
           </div>
         </div>
 
-        {/* System Logs Table */}
+        {/* Additional Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-xl shadow-sm border">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">User Role Distribution</h3>
+            </div>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats?.userRoleDistribution || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="role" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Regional Distribution</h3>
+            </div>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats?.regionalDistribution || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="region" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#10b981" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Applicants Table */}
         <div className="bg-white rounded-xl shadow-sm border mb-8">
           <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
               <h3 className="text-lg font-semibold text-gray-900">
-                System Logs
+                Recent Applicants
               </h3>
               <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
                 <div className="relative">
@@ -493,26 +429,14 @@ const AdminDashboard = () => {
                   />
                   <input
                     type="text"
-                    placeholder="Search logs..."
+                    placeholder="Search applicants..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-64 text-black"
                   />
                 </div>
-                <select
-                  value={selectedAction}
-                  onChange={(e) => setSelectedAction(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
-                >
-                  <option value="all">All Actions</option>
-                  {stats?.topActions.map((action) => (
-                    <option key={action.action} value={action.action}>
-                      {action.action}
-                    </option>
-                  ))}
-                </select>
                 <button
-                  onClick={exportLogs}
+                  onClick={exportApplicants}
                   className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
                 >
                   <Download size={16} className="mr-2" />
@@ -527,48 +451,66 @@ const AdminDashboard = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Log ID
+                    Applicant ID
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action
+                    Name
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User Role
+                    Email
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Timestamp
+                    Status
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Details
+                    Payment
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Region
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredLogs.slice(0, 50).map((log) => (
+                {stats?.recentApplicants?.map((applicant) => (
                   <tr
-                    key={log._id}
+                    key={applicant._id}
                     className="hover:bg-gray-50 transition-colors duration-150"
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {log.logId}
+                      {applicant.applicantId}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {applicant.firstName} {applicant.lastName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {applicant.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getActionBadgeColor(
-                          log.action
+                        className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(
+                          applicant.status
                         )}`}
                       >
-                        {log.action}
+                        {applicant.status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                      {log.userRole}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getPaymentStatusBadgeColor(
+                          applicant.paymentStatus
+                        )}`}
+                      >
+                        {applicant.paymentStatus.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
+                      {applicant.region}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatTimestamp(log.timestamp)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                      {JSON.stringify(log.details)}
+                      {formatTimestamp(applicant.createdAt)}
                     </td>
                   </tr>
                 ))}
@@ -576,60 +518,14 @@ const AdminDashboard = () => {
             </table>
           </div>
 
-          {filteredLogs.length === 0 && (
+          {(!stats?.recentApplicants || stats.recentApplicants.length === 0) && (
             <div className="text-center py-12">
               <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <p className="text-gray-500">
-                No logs found matching your criteria.
+                No applicants found.
               </p>
             </div>
           )}
-
-          {filteredLogs.length > 50 && (
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <p className="text-sm text-gray-600">
-                Showing first 50 of {filteredLogs.length} logs. Use filters to
-                narrow down results.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Revenue Chart */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Revenue</h3>
-            <select className="text-sm border border-gray-200 rounded-lg px-3 py-1 focus:outline-none text-black">
-              <option>October</option>
-              <option>November</option>
-              <option>December</option>
-            </select>
-          </div>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value) => `${value}%`} />
-                <Tooltip
-                  formatter={(value) => [`${value}%`, "Revenue"]}
-                  labelFormatter={(label) => `Quarter: ${label}`}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={{ fill: "#3b82f6", strokeWidth: 2, r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-4">
-            <div className="bg-blue-600 text-white px-3 py-1 rounded text-sm inline-block">
-              64,966.77
-            </div>
-          </div>
         </div>
       </div>
     );
