@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get('timeRange') || '7d';
     const now = new Date();
-    let startDate = new Date();
+    const startDate = new Date();
     
     switch (timeRange) {
       case '7d':
