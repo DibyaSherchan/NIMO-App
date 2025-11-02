@@ -1,10 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Users,
   Activity,
   Calendar,
-  TrendingUp,
   Search,
   RefreshCw,
   Settings,
@@ -12,25 +11,14 @@ import {
   FileText,
   Bell,
   User,
-  BarChart3,
-  DollarSign,
-  MapPin,
   Download,
   AlertCircle,
   LogOut,
   UserPlus,
   CheckCircle,
   XCircle,
-  Clock,
 } from "lucide-react";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
   AreaChart,
   Area,
   BarChart,
@@ -38,6 +26,11 @@ import {
   PieChart,
   Pie,
   Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
 import { signOut } from "next-auth/react";
 import AdminApplicantPage from "@/app/component/AdminApplicantPage";
@@ -55,8 +48,20 @@ interface DashboardStats {
   applicantStatusDistribution: { status: string; count: number }[];
   userRoleDistribution: { role: string; count: number }[];
   regionalDistribution: { region: string; count: number }[];
-  recentApplicants: any[];
+  recentApplicants: RecentApplicant[];
   monthlyApplications: { month: string; count: number }[];
+}
+
+interface RecentApplicant {
+  _id: string;
+  applicantId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  status: string;
+  paymentStatus: string;
+  region: string;
+  createdAt: string;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
@@ -67,14 +72,7 @@ const AdminDashboard = () => {
   const [selectedTimeRange, setSelectedTimeRange] = useState("7d");
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("dashboard");
-
-  useEffect(() => {
-    if (activeTab === "dashboard") {
-      fetchDashboardStats();
-    }
-  }, [selectedTimeRange, activeTab]);
-
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/admin/stats?timeRange=${selectedTimeRange}`);
@@ -85,7 +83,13 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedTimeRange]);
+
+  useEffect(() => {
+    if (activeTab === "dashboard") {
+      fetchDashboardStats();
+    }
+  }, [activeTab, fetchDashboardStats]);
 
   const formatTimestamp = (timestamp: string) => {
     return new Date(timestamp).toLocaleString();
