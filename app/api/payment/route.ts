@@ -31,8 +31,6 @@ export async function POST(request: NextRequest) {
     let paymentMethod: string;
     let paymentStatus: string;
     let paymentProof: File | null = null;
-
-    // Handle both JSON and FormData requests
     if (contentType.includes('application/json')) {
       const jsonData: JsonPaymentRequest = await request.json();
       applicantId = jsonData.applicantId;
@@ -50,16 +48,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Validate required fields
     if (!applicantId || !paymentMethod) {
       return NextResponse.json(
         { error: "Applicant ID and payment method are required" },
         { status: 400 }
       );
     }
-
-    // Find applicant
     const applicant = await Applicant.findOne({ applicantId });
     if (!applicant) {
       return NextResponse.json(
@@ -69,8 +63,6 @@ export async function POST(request: NextRequest) {
     }
 
     let paymentProofPath = "";
-
-    // Handle file upload for QR payments
     if (paymentProof && paymentMethod === "qr_phonepay") {
       const uploadDir = path.join(process.cwd(), "public", "uploads", "payments");
       try {
@@ -86,8 +78,6 @@ export async function POST(request: NextRequest) {
       await writeFile(filePath, buffer);
       paymentProofPath = `/uploads/payments/${fileName}`;
     }
-
-    // Update applicant payment info
     const updateData: PaymentUpdateData = {
       paymentMethod,
       paymentStatus,
@@ -102,8 +92,6 @@ export async function POST(request: NextRequest) {
       { applicantId },
       updateData
     );
-
-    // Log the payment action
     await Log.create({
       logId: uuidv4(),
       action: "PAYMENT_RECORDED",
