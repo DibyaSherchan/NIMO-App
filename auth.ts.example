@@ -1,0 +1,84 @@
+// lib/auth.ts - Example NextAuth v5 configuration
+import NextAuth from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { connectDB } from "@/lib/mongodb";
+import User from "@/models/User";
+import Log from "@/models/Log";
+import bcrypt from "bcryptjs";
+import { v4 as uuidv4 } from "uuid";
+import type { NextAuthConfig } from "next-auth";
+
+export const authConfig: NextAuthConfig = {
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        await connectDB();
+        
+        const user = await User.findOne({ email: credentials.email });
+        
+        if (!user) {
+          return null;
+        }
+
+        const isPasswordValid = await bcrypt.compare(
+          credentials.password as string,
+          user.password
+        );
+
+        if (!isPasswordValid) {
+          return null;
+        }
+
+        // Log the login
+        await Log.create({
+          logId: uuidv4(),
+          userId: user.userId,
+          action: "User Login",
+          timestamp: new Date(),
+          details: `User ${user.email} logged in successfully`
+        });
+
+        return {
+          id: user.userId,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
+      }
+    })
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+      }
+      return session;
+    }
+  },
+  pages: {
+    signIn: "/login",
+  },
+  session: {
+    strategy: "jwt"
+  }
+};
+
+// Export the auth handlers
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);

@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
-import { getServerSession } from "next-auth/next";
+import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
 import User from "@/models/User";
 import Log from "@/models/Log";
-import { authOptions } from "@/lib/auth";
+
 
 export async function POST(request: NextRequest) {
   const userAgent = request.headers.get("user-agent") || "unknown";
 
   try {
     await connectDB();
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session || !session.user?.email) {
       await Log.create({
@@ -229,7 +229,7 @@ export async function GET(request: NextRequest) {
 
   try {
     await connectDB();
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session || !session.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

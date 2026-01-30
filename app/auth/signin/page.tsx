@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -10,6 +11,7 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { status } = useSession();
+  const router = useRouter();
 
   // Show loading if checking session
   if (status === "loading") {
@@ -38,11 +40,15 @@ export default function SignIn() {
       const result = await signIn("credentials", {
         email: email.toLowerCase(),
         password,
-        callbackUrl: "/", // 👈 middleware handles role redirect
+        redirect: false, // Don't auto-redirect, handle it manually
       });
 
       if (result?.error) {
         setError("Invalid email or password");
+      } else if (result?.ok) {
+        // Success - redirect to home (middleware will handle role-based redirect)
+        router.push("/");
+        router.refresh();
       }
     } catch (error) {
       console.error("Sign in error:", error);
@@ -54,7 +60,7 @@ export default function SignIn() {
 
   const handleGoogleSignIn = async () => {
     try {
-      await signIn("google", { callbackUrl: "/" }); // 👈 middleware handles role redirect
+      await signIn("google", { callbackUrl: "/" }); // middleware handles role redirect
     } catch (error) {
       console.error("Google sign in error:", error);
       setError("Google sign in failed. Please try again.");

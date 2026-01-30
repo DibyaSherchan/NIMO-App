@@ -1,4 +1,5 @@
-import { NextAuthOptions } from "next-auth";
+import NextAuth, { DefaultSession } from "next-auth";
+import type { NextAuthConfig, User as NextAuthUser } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { connectDB } from "@/lib/mongodb";
@@ -6,29 +7,33 @@ import User from "@/models/User";
 import Log from "@/models/Log";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
-import { NextApiRequest } from "next";
-import { AdapterUser } from "next-auth/adapters";
-import { JWT } from "next-auth/jwt";
-import { Session, User as NextAuthUser } from "next-auth";
 
-interface SignInParams {
-  user: NextAuthUser | AdapterUser;
-  account: { provider: string; providerAccountId: string } | null;
-  profile?: unknown;
-  email?: { verificationRequest?: boolean };
-  credentials?: Record<string, unknown>;
-  req?: NextApiRequest;
+// Extend the built-in session types
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id?: string;
+      role?: string;
+    } & DefaultSession["user"];
+  }
 }
 
-// Create a type for user with role
-interface UserWithRole {
-  role?: string;
-  id?: string;
-  email?: string | null;
+declare module "next-auth/jwt" {
+  interface JWT {
+    role?: string;
+    id?: string;
+  }
+}
+
+// Custom type for user with role
+interface ExtendedUser {
+  id: string;
   name?: string | null;
+  email?: string | null;
+  role?: string;
 }
 
-export const authOptions: NextAuthOptions = {
+export const authConfig: NextAuthConfig = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -40,15 +45,12 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials, req) {
-        const userAgent = req?.headers?.['user-agent'] || 'unknown';
-
+      async authorize(credentials) {
         if (!credentials?.email || !credentials.password) {
           await Log.create({
             logId: uuidv4(),
             action: "LOGIN_FAILURE",
             userRole: "anonymous",
-            userAgent,
             details: {
               reason: "MISSING_CREDENTIALS",
               provider: "credentials"
@@ -58,35 +60,33 @@ export const authOptions: NextAuthOptions = {
         }
 
         await connectDB();
-        const user = await User.findOne({ email: credentials.email.toLowerCase() });
+        const user = await User.findOne({ email: (credentials.email as string).toLowerCase() });
 
         if (!user || !user.password) {
           await Log.create({
             logId: uuidv4(),
             action: "LOGIN_FAILURE",
             userRole: "anonymous",
-            userAgent,
             details: {
               reason: "USER_NOT_FOUND",
               provider: "credentials",
-              attemptedEmail: credentials.email.toLowerCase()
+              attemptedEmail: (credentials.email as string).toLowerCase()
             }
           });
           return null;
         }
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        const isValid = await bcrypt.compare(credentials.password as string, user.password);
         if (!isValid) {
           await Log.create({
             logId: uuidv4(),
             action: "LOGIN_FAILURE",
             userId: user._id,
             userRole: user.role,
-            userAgent,
             details: {
               reason: "INVALID_PASSWORD",
               provider: "credentials",
-              attemptedEmail: credentials.email.toLowerCase()
+              attemptedEmail: (credentials.email as string).toLowerCase()
             }
           });
           return null;
@@ -97,7 +97,6 @@ export const authOptions: NextAuthOptions = {
           action: "LOGIN_SUCCESS",
           userId: user._id,
           userRole: user.role,
-          userAgent,
           details: {
             provider: "credentials",
             method: "direct_login"
@@ -117,10 +116,7 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
 
   callbacks: {
-    async signIn(params: SignInParams) {
-      const { user, account, req } = params;
-      const userAgent = req?.headers?.['user-agent'] || 'unknown';
-
+    async signIn({ user, account }) {
       if (account?.provider === "google") {
         try {
           await connectDB();
@@ -137,7 +133,6 @@ export const authOptions: NextAuthOptions = {
               action: "LOGIN_SUCCESS",
               userId: existingUser._id,
               userRole: existingUser.role,
-              userAgent,
               details: {
                 provider: "google",
                 method: "existing_account"
@@ -151,9 +146,7 @@ export const authOptions: NextAuthOptions = {
             }
             await existingUser.save();
             
-            // Use a more specific type assertion
-            const userWithRole = user as UserWithRole;
-            userWithRole.role = existingUser.role;
+            (user as ExtendedUser).role = existingUser.role;
             user.id = existingUser._id.toString();
             return true; 
           } else {
@@ -161,7 +154,6 @@ export const authOptions: NextAuthOptions = {
               logId: uuidv4(),
               action: "LOGIN_REDIRECT_TO_SIGNUP",
               userRole: "anonymous",
-              userAgent,
               details: {
                 provider: "google",
                 reason: "NEW_USER_REDIRECT",
@@ -171,15 +163,14 @@ export const authOptions: NextAuthOptions = {
             });
             
             return `/auth/signup?google=true&email=${encodeURIComponent(
-              user.email!
-            )}&name=${encodeURIComponent(user.name!)}`;
+              user.email || ""
+            )}&name=${encodeURIComponent(user.name || "")}`;
           }
         } catch (error) {
           await Log.create({
             logId: uuidv4(),
             action: "LOGIN_FAILURE",
             userRole: "anonymous",
-            userAgent,
             details: {
               provider: "google",
               reason: "SERVER_ERROR",
@@ -196,9 +187,7 @@ export const authOptions: NextAuthOptions = {
 
     async jwt({ token, user, account }) {
       if (user) {
-        // Use a more specific type assertion
-        const userWithRole = user as UserWithRole;
-        token.role = userWithRole.role;
+        token.role = (user as ExtendedUser).role;
         token.id = user.id;
       }
       if (account?.provider === "google" && !token.role) {
@@ -229,3 +218,5 @@ export const authOptions: NextAuthOptions = {
     signIn: "/auth/signin",
   },
 };
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);

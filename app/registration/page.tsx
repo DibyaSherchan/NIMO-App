@@ -1,10 +1,10 @@
-import { getServerSession } from "next-auth/next";
+import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import ApplicantRegistrationForm from "@/app/component/ApplicantRegistrationForm";
-import { authOptions } from "@/lib/auth";
+
 
 export default async function RegistrationPage() {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   
   if (!session) {
     redirect("/auth/signin");
