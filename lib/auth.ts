@@ -8,24 +8,24 @@ import Log from "@/models/Log";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 
-// Extend NextAuth types to include custom fields
+// Extend the built-in session types
 declare module "next-auth" {
   interface Session {
     user: {
-      id?: string;      // Add user ID to session
-      role?: string;    // Add role to session
+      id?: string;
+      role?: string;
     } & DefaultSession["user"];
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    role?: string;      // Add role to JWT token
-    id?: string;        // Add user ID to JWT token
+    role?: string;
+    id?: string;
   }
 }
 
-// Custom user type with role property
+// Custom type for user with role
 interface ExtendedUser {
   id: string;
   name?: string | null;
@@ -33,15 +33,12 @@ interface ExtendedUser {
   role?: string;
 }
 
-// Main NextAuth configuration
 export const authConfig: NextAuthConfig = {
   providers: [
-    // Google OAuth provider
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    // Email/password credentials provider
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -49,7 +46,6 @@ export const authConfig: NextAuthConfig = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        // Validate that credentials are provided
         if (!credentials?.email || !credentials.password) {
           await Log.create({
             logId: uuidv4(),
@@ -63,13 +59,9 @@ export const authConfig: NextAuthConfig = {
           return null;
         }
 
-        // Connect to database and find user
         await connectDB();
-        const user = await User.findOne({ 
-          email: (credentials.email as string).toLowerCase() 
-        });
+        const user = await User.findOne({ email: (credentials.email as string).toLowerCase() });
 
-        // Handle user not found
         if (!user || !user.password) {
           await Log.create({
             logId: uuidv4(),
@@ -84,11 +76,7 @@ export const authConfig: NextAuthConfig = {
           return null;
         }
 
-        // Validate password
-        const isValid = await bcrypt.compare(
-          credentials.password as string, 
-          user.password
-        );
+        const isValid = await bcrypt.compare(credentials.password as string, user.password);
         if (!isValid) {
           await Log.create({
             logId: uuidv4(),
@@ -104,7 +92,6 @@ export const authConfig: NextAuthConfig = {
           return null;
         }
 
-        // Log successful login
         await Log.create({
           logId: uuidv4(),
           action: "LOGIN_SUCCESS",
@@ -116,7 +103,6 @@ export const authConfig: NextAuthConfig = {
           }
         });
 
-        // Return user object with required fields
         return {
           id: user._id.toString(),
           name: user.name,
@@ -127,19 +113,13 @@ export const authConfig: NextAuthConfig = {
     }),
   ],
 
-  // Use JWT for session management
   session: { strategy: "jwt" },
 
-  // Callbacks for customizing authentication flow
   callbacks: {
-    // Handle sign-in logic
     async signIn({ user, account }) {
-      // Special handling for Google OAuth
       if (account?.provider === "google") {
         try {
           await connectDB();
-          
-          // Check if user exists by email or Google ID
           const existingUser = await User.findOne({
             $or: [
               { email: user.email },
@@ -148,7 +128,6 @@ export const authConfig: NextAuthConfig = {
           });
 
           if (existingUser) {
-            // Log successful login for existing user
             await Log.create({
               logId: uuidv4(),
               action: "LOGIN_SUCCESS",
@@ -160,7 +139,6 @@ export const authConfig: NextAuthConfig = {
               }
             });
             
-            // Update user's last login and link Google account if needed
             existingUser.lastLogin = new Date();
             if (!existingUser.googleId) {
               existingUser.googleId = account.providerAccountId;
@@ -168,12 +146,10 @@ export const authConfig: NextAuthConfig = {
             }
             await existingUser.save();
             
-            // Add role and ID to user object
             (user as ExtendedUser).role = existingUser.role;
             user.id = existingUser._id.toString();
-            return true; // Allow sign-in
+            return true; 
           } else {
-            // New Google user - redirect to sign-up page
             await Log.create({
               logId: uuidv4(),
               action: "LOGIN_REDIRECT_TO_SIGNUP",
@@ -186,13 +162,11 @@ export const authConfig: NextAuthConfig = {
               }
             });
             
-            // Redirect to sign-up with pre-filled Google data
             return `/auth/signup?google=true&email=${encodeURIComponent(
               user.email || ""
             )}&name=${encodeURIComponent(user.name || "")}`;
           }
         } catch (error) {
-          // Log and handle errors during Google sign-in
           await Log.create({
             logId: uuidv4(),
             action: "LOGIN_FAILURE",
@@ -208,17 +182,14 @@ export const authConfig: NextAuthConfig = {
           return false;
         }
       }
-      return true; // Allow other providers
+      return true; 
     },
 
-    // Add custom data to JWT token
     async jwt({ token, user, account }) {
-      // Add role and ID from user object to token
       if (user) {
         token.role = (user as ExtendedUser).role;
         token.id = user.id;
       }
-      // For Google users, fetch role from database if not in token
       if (account?.provider === "google" && !token.role) {
         try {
           await connectDB();
@@ -234,7 +205,6 @@ export const authConfig: NextAuthConfig = {
       return token;
     },
 
-    // Add custom data to session from token
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
@@ -244,11 +214,9 @@ export const authConfig: NextAuthConfig = {
     },
   },
 
-  // Custom page paths
   pages: {
-    signIn: "/auth/signin", // Custom sign-in page
+    signIn: "/auth/signin",
   },
 };
 
-// Export NextAuth functions for use in the app
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
