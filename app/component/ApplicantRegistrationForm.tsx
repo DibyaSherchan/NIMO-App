@@ -12,8 +12,9 @@ import {
   Briefcase,
 } from "lucide-react";
 
-const MIN_WIDTH = 600;
-const MIN_HEIGHT = 600;
+// Constants for validation
+const MIN_WIDTH = 600;      // Minimum image width in pixels
+const MIN_HEIGHT = 600;     // Minimum image height in pixels
 const DESTINATION_COUNTRIES = [
   "UAE",
   "Qatar",
@@ -33,12 +34,19 @@ const DESTINATION_COUNTRIES = [
   "Other",
 ];
 
+/**
+ * Main registration form component for foreign employment applicants
+ * Handles form submission, validation, and file uploads
+ */
 const ApplicantRegistrationForm = () => {
   const router = useRouter();
+  
+  // Form state management
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Form data state with all required fields
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -48,7 +56,7 @@ const ApplicantRegistrationForm = () => {
     passportExpiry: "",
     passportIssuePlace: "",
     dateOfBirth: "",
-    nationality: "Nepali", 
+    nationality: "Nepali", // Default value for Nepali applicants
     gender: "",
     maritalStatus: "",
     address: "",
@@ -62,6 +70,7 @@ const ApplicantRegistrationForm = () => {
     biometricData: null as File | null,
   });
 
+  // Handle text input changes
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -70,6 +79,7 @@ const ApplicantRegistrationForm = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
+    // Clear error for this field if it exists
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -79,6 +89,7 @@ const ApplicantRegistrationForm = () => {
     }
   };
 
+  // Handle file input changes
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
     if (files && files[0]) {
@@ -86,9 +97,10 @@ const ApplicantRegistrationForm = () => {
     }
   };
 
+  // Check image resolution for uploaded files
   const checkImageResolution = (file: File): Promise<boolean> => {
     return new Promise((resolve) => {
-      if (!file.type.startsWith("image/")) return resolve(true); 
+      if (!file.type.startsWith("image/")) return resolve(true); // Skip for non-images
 
       const img = new Image();
       img.onload = () => {
@@ -99,42 +111,32 @@ const ApplicantRegistrationForm = () => {
     });
   };
 
+  // Validate all form fields before submission
   const validateForm = async () => {
     const newErrors: Record<string, string> = {};
+    
+    // Required field validations
     if (!formData.firstName) newErrors.firstName = "First name is required";
     if (!formData.lastName) newErrors.lastName = "Last name is required";
     if (!formData.email) newErrors.email = "Email is required";
     if (!formData.phone) newErrors.phone = "Phone number is required";
-    if (!formData.passportNumber)
-      newErrors.passportNumber = "Passport number is required";
-    if (!formData.passportExpiry)
-      newErrors.passportExpiry = "Passport expiry date is required";
-    if (!formData.passportIssuePlace)
-      newErrors.passportIssuePlace = "Passport issue place is required";
-    if (!formData.dateOfBirth)
-      newErrors.dateOfBirth = "Date of birth is required";
-    if (!formData.nationality)
-      newErrors.nationality = "Nationality is required";
+    if (!formData.passportNumber) newErrors.passportNumber = "Passport number is required";
+    if (!formData.passportExpiry) newErrors.passportExpiry = "Passport expiry date is required";
+    if (!formData.passportIssuePlace) newErrors.passportIssuePlace = "Passport issue place is required";
+    if (!formData.dateOfBirth) newErrors.dateOfBirth = "Date of birth is required";
+    if (!formData.nationality) newErrors.nationality = "Nationality is required";
     if (!formData.gender) newErrors.gender = "Gender is required";
-    if (!formData.maritalStatus)
-      newErrors.maritalStatus = "Marital status is required";
+    if (!formData.maritalStatus) newErrors.maritalStatus = "Marital status is required";
     if (!formData.address) newErrors.address = "Address is required";
-    if (!formData.emergencyContact)
-      newErrors.emergencyContact = "Emergency contact is required";
-    if (!formData.emergencyPhone)
-      newErrors.emergencyPhone = "Emergency phone is required";
-    if (!formData.destinationCountry)
-      newErrors.destinationCountry = "Destination country is required";
-    if (!formData.jobPosition)
-      newErrors.jobPosition = "Job position is required";
+    if (!formData.emergencyContact) newErrors.emergencyContact = "Emergency contact is required";
+    if (!formData.emergencyPhone) newErrors.emergencyPhone = "Emergency phone is required";
+    if (!formData.destinationCountry) newErrors.destinationCountry = "Destination country is required";
+    if (!formData.jobPosition) newErrors.jobPosition = "Job position is required";
 
+    // Format validations
     const passportRegex = /^[A-Z0-9]{6,12}$/i;
-    if (
-      formData.passportNumber &&
-      !passportRegex.test(formData.passportNumber)
-    ) {
-      newErrors.passportNumber =
-        "Invalid passport number format (6–12 alphanumeric characters)";
+    if (formData.passportNumber && !passportRegex.test(formData.passportNumber)) {
+      newErrors.passportNumber = "Invalid passport number format (6–12 alphanumeric characters)";
     }
 
     const phoneRegex = /^[+]?[0-9]{10,15}$/;
@@ -145,6 +147,8 @@ const ApplicantRegistrationForm = () => {
     if (formData.emergencyPhone && !phoneRegex.test(formData.emergencyPhone)) {
       newErrors.emergencyPhone = "Invalid emergency phone number format";
     }
+    
+    // File validation
     const validTypes = ["image/jpeg", "image/png", "application/pdf"];
     const filesToCheck: Array<[string, File | null]> = [
       ["passportScan", formData.passportScan],
@@ -154,34 +158,38 @@ const ApplicantRegistrationForm = () => {
 
     for (const [field, file] of filesToCheck) {
       if (file) {
+        // File type validation
         if (!validTypes.includes(file.type)) {
           newErrors[field] = "Only JPG, PNG, and PDF files are allowed";
         }
+        // File size validation (5MB limit)
         if (file.size > 5 * 1024 * 1024) {
           newErrors[field] = "File size must be less than 5MB";
         }
+        // Image resolution validation for image files
         if (file.type.startsWith("image/")) {
           const isValidRes = await checkImageResolution(file);
           if (!isValidRes) {
-            newErrors[
-              field
-            ] = `Image resolution must be at least ${MIN_WIDTH}x${MIN_HEIGHT}px`;
+            newErrors[field] = `Image resolution must be at least ${MIN_WIDTH}x${MIN_HEIGHT}px`;
           }
         }
       }
     }
 
+    // Required file validation
     if (!formData.passportScan) {
       newErrors.passportScan = "Passport scan is required";
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return Object.keys(newErrors).length === 0; // Return true if no errors
   };
 
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate form before submission
     const isValid = await validateForm();
     if (!isValid) return;
 
@@ -189,6 +197,7 @@ const ApplicantRegistrationForm = () => {
     setMessage("");
 
     try {
+      // Prepare form data for submission
       const submitData = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
         if (value !== null) {
@@ -196,6 +205,7 @@ const ApplicantRegistrationForm = () => {
         }
       });
 
+      // Submit to API endpoint
       const response = await fetch("/api/applicants", {
         method: "POST",
         body: submitData,
@@ -203,10 +213,10 @@ const ApplicantRegistrationForm = () => {
 
       const result = await response.json();
 
+      // Handle API response
       if (response.ok) {
-        setMessage(
-          `Application submitted successfully! Redirecting to payment...`
-        );
+        setMessage(`Application submitted successfully! Redirecting to payment...`);
+        // Redirect to payment page with applicant ID
         setTimeout(() => {
           router.push(`/payment?applicantId=${result.applicantId}`);
         }, 2000);
@@ -223,11 +233,13 @@ const ApplicantRegistrationForm = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
+      {/* Page header */}
       <h2 className="text-2xl font-bold mb-6 flex items-center">
         <User className="mr-2" size={24} />
         Foreign Employment Application
       </h2>
 
+      {/* Status message display */}
       {message && (
         <div
           className={`p-4 mb-4 rounded ${
@@ -240,7 +252,9 @@ const ApplicantRegistrationForm = () => {
         </div>
       )}
 
+      {/* Main form */}
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Personal Information Section */}
         <div className="border-b pb-4">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <User size={18} className="mr-2" />
@@ -389,6 +403,7 @@ const ApplicantRegistrationForm = () => {
           </div>
         </div>
 
+        {/* Passport Information Section */}
         <div className="border-b pb-4">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <FileText size={18} className="mr-2" />
@@ -502,6 +517,7 @@ const ApplicantRegistrationForm = () => {
           </div>
         </div>
 
+        {/* Employment Information Section */}
         <div className="border-b pb-4">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <Briefcase size={18} className="mr-2" />
@@ -560,6 +576,7 @@ const ApplicantRegistrationForm = () => {
           </div>
         </div>
 
+        {/* Emergency Contact Section */}
         <div className="border-b pb-4">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <Heart size={18} className="mr-2" />
@@ -611,6 +628,7 @@ const ApplicantRegistrationForm = () => {
           </div>
         </div>
 
+        {/* Medical Information Section */}
         <div className="border-b pb-4">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <Heart size={18} className="mr-2" />
@@ -632,6 +650,7 @@ const ApplicantRegistrationForm = () => {
           </div>
         </div>
 
+        {/* Document Uploads Section */}
         <div className="pb-4">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <Upload size={18} className="mr-2" />
@@ -696,6 +715,7 @@ const ApplicantRegistrationForm = () => {
           </div>
         </div>
 
+        {/* Submit Button Section */}
         <div className="border-t pt-6">
           <button
             type="submit"

@@ -9,6 +9,8 @@ import {
   Upload,
   FileText,
 } from "lucide-react";
+
+// Interface for report data structure
 interface ReportData {
   reportId: string;
   name: string;
@@ -23,9 +25,15 @@ interface ReportData {
   documentHash: string;
 }
 
+/**
+ * Report verification page component
+ * Allows users to verify medical report authenticity via QR code link
+ */
 export default function VerifyReport() {
   const params = useParams();
   const reportId = params.reportId as string;
+  
+  // State management
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -33,9 +41,12 @@ export default function VerifyReport() {
   const [verifying, setVerifying] = useState(false);
   const [hashMatch, setHashMatch] = useState<boolean | null>(null);
 
+  // Fetch report data on component mount
   useEffect(() => {
     fetchReportData();
   }, [reportId]);
+
+  // Fetch report metadata from API
   const fetchReportData = async (): Promise<void> => {
     try {
       const response = await fetch(`/api/reports/verify/${reportId}`);
@@ -53,19 +64,22 @@ export default function VerifyReport() {
     }
   };
 
+  // Handle PDF file upload for verification
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type === "application/pdf") {
       setPdfFile(file);
-      setHashMatch(null);
+      setHashMatch(null); // Reset previous verification result
     }
   };
 
+  // Verify PDF file integrity by comparing SHA-256 hashes
   const verifyPdfHash = async () => {
     if (!pdfFile) return;
 
     setVerifying(true);
     try {
+      // Read file and compute SHA-256 hash
       const arrayBuffer = await pdfFile.arrayBuffer();
       const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -73,9 +87,11 @@ export default function VerifyReport() {
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
+      // Fetch original hash from server for comparison
       const response = await fetch(`/api/reports/verify/${reportId}`);
       const data = (await response.json()) as ReportData;
 
+      // Compare computed hash with stored hash
       setHashMatch(computedHash === data.documentHash);
     } catch (err) {
       console.error("Error verifying PDF:", err);
@@ -85,6 +101,7 @@ export default function VerifyReport() {
     }
   };
 
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -96,6 +113,7 @@ export default function VerifyReport() {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
@@ -110,11 +128,13 @@ export default function VerifyReport() {
     );
   }
 
+  // Check if report is currently valid
   const isValid = reportData?.isValid;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
       <div className="max-w-4xl mx-auto">
+        {/* Main verification result card */}
         <div className="bg-white rounded-lg shadow-xl overflow-hidden mb-6">
           <div
             className={`p-6 ${
@@ -123,6 +143,7 @@ export default function VerifyReport() {
                 : "bg-yellow-50 border-b-4 border-yellow-500"
             }`}
           >
+            {/* Status icon */}
             <div className="flex items-center justify-center mb-4">
               {isValid ? (
                 <CheckCircle2 className="w-20 h-20 text-green-500" />
@@ -130,6 +151,7 @@ export default function VerifyReport() {
                 <AlertCircle className="w-20 h-20 text-yellow-500" />
               )}
             </div>
+            {/* Status message */}
             <h1 className="text-3xl font-bold text-center mb-2 text-black">
               {isValid ? "Report Verified ✓" : "Report Expired"}
             </h1>
@@ -140,7 +162,7 @@ export default function VerifyReport() {
             </p>
           </div>
 
-          {/* Report Details */}
+          {/* Report Details Section */}
           {reportData && (
             <div className="p-6 space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
@@ -207,7 +229,7 @@ export default function VerifyReport() {
           )}
         </div>
 
-        {/* PDF Verification Card */}
+        {/* PDF Verification Section */}
         <div className="bg-white rounded-lg shadow-xl p-6">
           <h2 className="text-2xl font-bold mb-4 flex items-center text-black">
             <FileText className="w-6 h-6 mr-2 text-blue-600" />
@@ -218,6 +240,7 @@ export default function VerifyReport() {
             hasn&apos;t been tampered with.
           </p>
 
+          {/* File upload area */}
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
             <input
               type="file"
@@ -237,6 +260,7 @@ export default function VerifyReport() {
             </label>
           </div>
 
+          {/* Verify button (only shows when file is uploaded) */}
           {pdfFile && (
             <button
               onClick={verifyPdfHash}
@@ -247,6 +271,7 @@ export default function VerifyReport() {
             </button>
           )}
 
+          {/* Verification result display */}
           {hashMatch !== null && (
             <div
               className={`mt-6 p-4 rounded-lg ${
@@ -286,7 +311,7 @@ export default function VerifyReport() {
             </div>
           )}
 
-          {/* Technical Details */}
+          {/* Technical details section (expandable) */}
           {reportData && (
             <div className="mt-8 pt-6 border-t border-gray-200">
               <details className="cursor-pointer">
@@ -312,7 +337,7 @@ export default function VerifyReport() {
           )}
         </div>
 
-        {/* Info Footer */}
+        {/* Informational footer */}
         <div className="mt-6 text-center text-sm text-gray-600 bg-white rounded-lg shadow p-4">
           <p className="font-semibold mb-2">About This Verification</p>
           <p>

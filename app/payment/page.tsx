@@ -2,32 +2,43 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CreditCard, Smartphone, Banknote, CheckCircle } from "lucide-react";
+
+/**
+ * Main payment form content component
+ * Handles payment method selection and submission
+ */
 function PaymentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // State management for payment form
   const [applicantId, setApplicantId] = useState<string | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
   
+  // Get applicant ID from URL parameters when component loads
   useEffect(() => {
     if (searchParams) {
       setApplicantId(searchParams.get("applicantId"));
     }
   }, [searchParams]);
 
+  // Handle payment method selection
   const handlePaymentMethodSelect = (method: string) => {
     setSelectedMethod(method);
-    setMessage("");
+    setMessage(""); // Clear any previous messages
   };
 
+  // Handle file upload for payment proof
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setPaymentProof(e.target.files[0]);
     }
   };
 
+  // Process QR/PhonePay payment with file upload
   const handleQRPayment = async () => {
     if (!paymentProof) {
       setMessage("Please upload payment proof before submitting");
@@ -38,11 +49,13 @@ function PaymentContent() {
     setMessage("");
 
     try {
+      // Prepare form data for file upload
       const formData = new FormData();
       formData.append("applicantId", applicantId || "");
       formData.append("paymentMethod", "qr_phonepay");
       formData.append("paymentProof", paymentProof);
 
+      // Submit payment to API
       const response = await fetch("/api/payment", {
         method: "POST",
         body: formData,
@@ -50,8 +63,10 @@ function PaymentContent() {
 
       const result = await response.json();
 
+      // Handle API response
       if (response.ok) {
         setMessage("Payment proof submitted successfully! You will be notified once verified.");
+        // Redirect to dashboard after successful submission
         setTimeout(() => {
           router.push("/dashboard/foreign");
         }, 3000);
@@ -66,11 +81,13 @@ function PaymentContent() {
     }
   };
 
+  // Process cash or card payment (no file upload needed)
   const handleCashOrCardPayment = async () => {
     setIsSubmitting(true);
     setMessage("");
 
     try {
+      // Submit payment method without file
       const response = await fetch("/api/payment", {
         method: "POST",
         headers: {
@@ -79,14 +96,16 @@ function PaymentContent() {
         body: JSON.stringify({
           applicantId: applicantId,
           paymentMethod: selectedMethod,
-          paymentStatus: "pending_reception",
+          paymentStatus: "pending_reception", // Status for in-person payments
         }),
       });
 
       const result = await response.json();
 
+      // Handle API response
       if (response.ok) {
         setMessage("Payment method recorded. Please proceed to reception.");
+        // Redirect to dashboard after successful recording
         setTimeout(() => {
           router.push("/dashboard/foreign");
         }, 3000);
@@ -101,12 +120,14 @@ function PaymentContent() {
     }
   };
 
+  // Handle final form submission
   const handleSubmit = () => {
     if (!selectedMethod) {
       setMessage("Please select a payment method");
       return;
     }
 
+    // Route to appropriate handler based on payment method
     if (selectedMethod === "qr_phonepay") {
       handleQRPayment();
     } else {
@@ -114,6 +135,7 @@ function PaymentContent() {
     }
   };
   
+  // Show loading while waiting for applicant ID
   if (applicantId === null) {
     return (
       <div className="max-w-4xl mx-auto p-6">
@@ -125,6 +147,7 @@ function PaymentContent() {
     );
   }
 
+  // Show error if no applicant ID is found
   if (!applicantId) {
     return (
       <div className="max-w-4xl mx-auto p-6">
@@ -137,11 +160,13 @@ function PaymentContent() {
 
   return (
     <div className="my-20 w-full p-6 bg-white text-black rounded-lg shadow-md">
+      {/* Page header */}
       <h2 className="text-2xl font-bold mb-6 flex items-center">
         <CheckCircle className="mr-2 text-green-600" size={24} />
         Complete Your Payment
       </h2>
 
+      {/* Status message display */}
       {message && (
         <div
           className={`p-4 mb-4 rounded ${
@@ -154,14 +179,16 @@ function PaymentContent() {
         </div>
       )}
 
+      {/* Applicant ID display */}
       <p className="text-gray-600 mb-6">
         Application ID: <span className="font-semibold">{applicantId}</span>
       </p>
 
+      {/* Payment method selection */}
       <div className="space-y-4 mb-6">
         <h3 className="text-lg font-semibold mb-4">Select Payment Method</h3>
 
-        {/* QR Code PhonePay Option */}
+        {/* QR Code / PhonePay Option */}
         <div
           onClick={() => handlePaymentMethodSelect("qr_phonepay")}
           className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
@@ -178,8 +205,10 @@ function PaymentContent() {
             </div>
           </div>
 
+          {/* QR payment details (shown when selected) */}
           {selectedMethod === "qr_phonepay" && (
             <div className="mt-4 space-y-4">
+              {/* QR code image */}
               <div className="bg-white p-4 rounded border border-gray-300 flex justify-center">
                 <img
                   src="/qr.jpg"
@@ -187,11 +216,15 @@ function PaymentContent() {
                   className="w-64 h-64"
                 />
               </div>
+              
+              {/* Instruction note */}
               <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
                 <p className="text-sm text-yellow-800">
                   After payment, please upload your payment screenshot/receipt below
                 </p>
               </div>
+              
+              {/* File upload input */}
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Upload Payment Proof *
@@ -208,6 +241,8 @@ function PaymentContent() {
                   </p>
                 )}
               </div>
+              
+              {/* Verification contact information */}
               <div className="bg-blue-50 border border-blue-200 rounded p-3">
                 <p className="text-sm text-blue-800">
                   <strong>For verification, send payment proof to:</strong>
@@ -238,6 +273,7 @@ function PaymentContent() {
             </div>
           </div>
 
+          {/* Card payment instructions (shown when selected) */}
           {selectedMethod === "card" && (
             <div className="mt-4 bg-orange-50 border border-orange-200 rounded p-4">
               <p className="text-sm text-orange-800 font-semibold mb-2">
@@ -269,6 +305,7 @@ function PaymentContent() {
             </div>
           </div>
 
+          {/* Cash payment instructions (shown when selected) */}
           {selectedMethod === "cash" && (
             <div className="mt-4 bg-orange-50 border border-orange-200 rounded p-4">
               <p className="text-sm text-orange-800 font-semibold mb-2">
@@ -284,6 +321,7 @@ function PaymentContent() {
         </div>
       </div>
 
+      {/* Submit button section */}
       <div className="border-t pt-6">
         <button
           onClick={handleSubmit}
@@ -303,6 +341,11 @@ function PaymentContent() {
     </div>
   );
 }
+
+/**
+ * Main PaymentPage component with Suspense wrapper
+ * Handles loading state while search params are being accessed
+ */
 const PaymentPage = () => {
   return (
     <Suspense fallback={

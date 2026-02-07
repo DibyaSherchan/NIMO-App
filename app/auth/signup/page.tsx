@@ -5,7 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 
+/**
+ * Main sign-up form content component
+ */
 function SignUpContent() {
+  // Form state management
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -21,14 +25,17 @@ function SignUpContent() {
   const [labelClickCount, setLabelClickCount] = useState(0);
   const [showAdminOption, setShowAdminOption] = useState(false);
   
+  // Router and search params for handling redirects and OAuth data
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Check if user is coming from Google OAuth flow
   useEffect(() => {
     const googleParam = searchParams.get('google');
     const emailParam = searchParams.get('email');
     const nameParam = searchParams.get('name');
     
+    // Pre-fill form with Google OAuth data if available
     if (googleParam === 'true' && emailParam && nameParam) {
       setIsGoogleSignup(true);
       setFormData(prev => ({
@@ -39,6 +46,7 @@ function SignUpContent() {
     }
   }, [searchParams]);
 
+  // Easter egg: click Account Type label 5 times to show Admin option
   const handleLabelClick = () => {
     const newCount = labelClickCount + 1;
     setLabelClickCount(newCount);
@@ -48,6 +56,7 @@ function SignUpContent() {
     }
   };
 
+  // Handle form input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
@@ -55,12 +64,14 @@ function SignUpContent() {
     });
   };
 
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setSuccess("");
     
+    // Validate required fields
     if (!formData.role) {
       setError("Please select an account type");
       setLoading(false);
@@ -73,6 +84,7 @@ function SignUpContent() {
       return;
     }
 
+    // Validate passwords for regular sign-up
     if (!isGoogleSignup) {
       if (formData.password !== formData.confirmPassword) {
         setError("Passwords do not match");
@@ -87,6 +99,7 @@ function SignUpContent() {
       }
     }
 
+    // Validate name
     if (!formData.name.trim()) {
       setError("Name is required");
       setLoading(false);
@@ -94,8 +107,10 @@ function SignUpContent() {
     }
 
     try {
+      // Determine API endpoint based on sign-up type
       const endpoint = isGoogleSignup ? "/api/auth/google-register" : "/api/auth/register";
       
+      // Send registration request
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -113,14 +128,17 @@ function SignUpContent() {
 
       const data = await response.json();
 
+      // Handle registration response
       if (response.ok) {
         if (isGoogleSignup) {
           setSuccess("Account created successfully! Signing you in...");
+          // Auto-sign-in for Google users
           setTimeout(async () => {
             await signIn("google", { callbackUrl: "/" });
           }, 1000);
         } else {
           setSuccess("Account created successfully! Redirecting to sign in...");
+          // Redirect to sign-in page for regular users
           setTimeout(() => {
             router.push("/auth/signin");
           }, 2000);
@@ -136,6 +154,7 @@ function SignUpContent() {
     }
   };
 
+  // Handle Google OAuth sign-up
   const handleGoogleSignUp = () => {
     signIn("google", { callbackUrl: "/" });
   };
@@ -156,6 +175,7 @@ function SignUpContent() {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {/* Error and success messages */}
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
               {error}
@@ -168,6 +188,7 @@ function SignUpContent() {
             </div>
           )}
 
+          {/* Registration form fields */}
           <div className="space-y-4">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
@@ -178,7 +199,7 @@ function SignUpContent() {
                 name="name"
                 type="text"
                 required
-                disabled={isGoogleSignup}
+                disabled={isGoogleSignup} // Disabled for Google sign-up
                 className={`mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm ${
                   isGoogleSignup ? 'bg-gray-100' : ''
                 }`}
@@ -197,7 +218,7 @@ function SignUpContent() {
                 name="email"
                 type="email"
                 required
-                disabled={isGoogleSignup}
+                disabled={isGoogleSignup} // Disabled for Google sign-up
                 className={`mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm ${
                   isGoogleSignup ? 'bg-gray-100' : ''
                 }`}
@@ -230,7 +251,7 @@ function SignUpContent() {
               <label 
                 htmlFor="role" 
                 className="block text-sm font-medium text-gray-700 cursor-pointer select-none"
-                onClick={handleLabelClick}
+                onClick={handleLabelClick} // Easter egg handler
               >
                 Account Type *
               </label>
@@ -245,6 +266,7 @@ function SignUpContent() {
                 <option value="">Select your account type</option>
                 <option value="ForeignEmployee">Foreign Employee</option>
                 <option value="MedicalOrganization">Medical Organization</option>
+                {/* Admin option only shown after easter egg */}
                 {showAdminOption && (
                   <option value="Admin">Admin</option>
                 )}
@@ -257,6 +279,7 @@ function SignUpContent() {
               </p>
             </div>
 
+            {/* Password fields only shown for regular sign-up */}
             {!isGoogleSignup && (
               <>
                 <div>
@@ -294,6 +317,7 @@ function SignUpContent() {
             )}
           </div>
 
+          {/* Submit button */}
           <div>
             <button
               type="submit"
@@ -307,6 +331,7 @@ function SignUpContent() {
             </button>
           </div>
 
+          {/* Google sign-up option (only for regular sign-up) */}
           {!isGoogleSignup && (
             <>
               <div className="relative">
@@ -324,6 +349,7 @@ function SignUpContent() {
                   onClick={handleGoogleSignUp}
                   className="group relative w-full flex justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
+                  {/* Google logo SVG */}
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"
@@ -348,6 +374,7 @@ function SignUpContent() {
             </>
           )}
 
+          {/* Link to sign-in page */}
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{" "}
@@ -361,6 +388,11 @@ function SignUpContent() {
     </div>
   );
 }
+
+/**
+ * Main SignUp component with Suspense wrapper
+ * Handles loading state while search params are being accessed
+ */
 export default function SignUp() {
   return (
     <Suspense fallback={

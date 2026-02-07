@@ -3,15 +3,23 @@ import User from '@/models/User';
 import Applicant from '@/models/Applicant';
 import { connectDB } from '@/lib/mongodb';
 
+/**
+ * @route   GET /api/dashboard/stats
+ * @desc    Get dashboard statistics
+ */
 export async function GET(request: NextRequest) {
   try {
+    // Connect to MongoDB
     await connectDB();
 
+    // Read time range from query params
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get('timeRange') || '7d';
+
     const now = new Date();
     const startDate = new Date();
-    
+
+    // Set start date based on selected time range
     switch (timeRange) {
       case '7d':
         startDate.setDate(now.getDate() - 7);
@@ -29,9 +37,11 @@ export async function GET(request: NextRequest) {
         startDate.setDate(now.getDate() - 7);
     }
 
+    // User statistics
     const totalUsers = await User.countDocuments();
     const activeUsers = await User.countDocuments({ isActive: true });
-    
+
+    // User role distribution
     const userRoleDistribution = await User.aggregate([
       {
         $group: {
@@ -48,11 +58,13 @@ export async function GET(request: NextRequest) {
       }
     ]);
 
+    // Applicant status counts
     const totalApplicants = await Applicant.countDocuments();
     const pendingApplicants = await Applicant.countDocuments({ status: 'pending' });
     const approvedApplicants = await Applicant.countDocuments({ status: 'approved' });
     const rejectedApplicants = await Applicant.countDocuments({ status: 'rejected' });
 
+    // Applicant status distribution
     const applicantStatusDistribution = await Applicant.aggregate([
       {
         $group: {
@@ -69,6 +81,7 @@ export async function GET(request: NextRequest) {
       }
     ]);
 
+    // Regional distribution of applicants
     const regionalDistribution = await Applicant.aggregate([
       {
         $group: {
@@ -85,6 +98,7 @@ export async function GET(request: NextRequest) {
       }
     ]);
 
+    // User growth over time
     const userGrowth = await User.aggregate([
       {
         $match: {
@@ -114,6 +128,7 @@ export async function GET(request: NextRequest) {
       }
     ]);
 
+    // Applicant growth over time
     const applicantGrowth = await Applicant.aggregate([
       {
         $match: {
@@ -143,12 +158,14 @@ export async function GET(request: NextRequest) {
       }
     ]);
 
+    // Recently added applicants
     const recentApplicants = await Applicant.find()
       .sort({ createdAt: -1 })
       .limit(10)
       .select('applicantId firstName lastName email status paymentStatus region createdAt')
       .lean();
 
+    // Monthly application count for current year
     const monthlyApplications = await Applicant.aggregate([
       {
         $match: {
@@ -160,9 +177,7 @@ export async function GET(request: NextRequest) {
       },
       {
         $group: {
-          _id: {
-            $month: '$createdAt'
-          },
+          _id: { $month: '$createdAt' },
           count: { $sum: 1 }
         }
       },
@@ -187,6 +202,7 @@ export async function GET(request: NextRequest) {
       }
     ]);
 
+    // Final dashboard response
     const stats = {
       totalUsers,
       totalApplicants,
@@ -205,6 +221,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(stats);
   } catch (error) {
+    // Handle dashboard errors
     console.error('Error fetching dashboard stats:', error);
     return NextResponse.json(
       { error: 'Failed to fetch dashboard statistics' },

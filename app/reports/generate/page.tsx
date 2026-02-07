@@ -11,12 +11,14 @@ import {
 } from "lucide-react";
 import { generateMedicalReportPDF } from "@/lib/pdfGenerator";
 
+// Interface for laboratory test results
 interface LabResult {
   result: string;
   reference: string;
   unit?: string;
 }
 
+// Interface for the complete medical report form data
 interface ReportFormData {
   name: string;
   age: string;
@@ -54,6 +56,7 @@ interface ReportFormData {
   reportId: string;
 }
 
+// Interface for applicant data
 interface Applicant {
   _id: string;
   applicantId: string;
@@ -72,25 +75,31 @@ interface Applicant {
   status: string;
 }
 
+/**
+ * Main component for generating and editing medical reports
+ * Handles both creating new reports and editing existing ones
+ */
 const GenerateReportContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // Get parameters from URL
   const applicantIdFromUrl = searchParams.get("applicantId");
   const reportIdFromUrl = searchParams.get("reportId");
   const isEditMode = searchParams.get("edit") === "true";
 
+  // State management
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [filteredApplicants, setFilteredApplicants] = useState<Applicant[]>([]);
   const [showApplicantList, setShowApplicantList] = useState(false);
-  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(
-    null
-  );
+  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [generatedPdfUrl, setGeneratedPdfUrl] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
+  // Default form data with standard lab values
   const [formData, setFormData] = useState<ReportFormData>({
     name: "",
     age: "0",
@@ -99,7 +108,7 @@ const GenerateReportContent = () => {
     passportNo: "",
     passportExpiry: "",
     passportIssuePlace: "NEPAL",
-    examinationDate: new Date().toISOString().split("T")[0],
+    examinationDate: new Date().toISOString().split("T")[0], // Today's date
     destination: "",
     nationality: "",
     height: "",
@@ -108,6 +117,7 @@ const GenerateReportContent = () => {
     temperature: "98.6",
     bloodPressure: "120/80",
     clinicalImpression: "Normal",
+    // Default laboratory results with standard reference values
     labResults: {
       "Total WBC Count": {
         result: "6,700",
@@ -151,8 +161,8 @@ const GenerateReportContent = () => {
       Cannabis: { result: "Negative", reference: "" },
       "Mantoux Test": { result: "Negative", reference: "" },
     },
-    physicianName: "DR. ANUJ SHRESTHA",
-    physicianLicense: "NMC NO.17681",
+    physicianName: "DR. ANUJ SHRESTHA", // Default physician
+    physicianLicense: "NMC NO.17681", // Default license
     applicantId: "",
     email: "",
     phone: "",
@@ -167,9 +177,11 @@ const GenerateReportContent = () => {
     stoolTest: "Normal",
     pregnancyTest: "Not Applicable",
     vaccinationStatus: "Up to date",
+    // Generate unique report ID
     reportId: Math.random().toString(36).substring(2, 10).toUpperCase(),
   });
 
+  // Fetch applicants list on component mount
   useEffect(() => {
     const fetchApplicants = async () => {
       try {
@@ -184,6 +196,7 @@ const GenerateReportContent = () => {
     fetchApplicants();
   }, []);
 
+  // Handle URL parameters for editing or pre-selecting applicant
   useEffect(() => {
     if (reportIdFromUrl && isEditMode) {
       fetchExistingReport(reportIdFromUrl);
@@ -198,61 +211,23 @@ const GenerateReportContent = () => {
     }
   }, [applicantIdFromUrl, reportIdFromUrl, isEditMode, applicants]);
 
+  // Fetch existing report data for editing
   const fetchExistingReport = async (reportId: string) => {
     try {
       setLoading(true);
       const res = await fetch(`/api/reports/${reportId}`);
       if (res.ok) {
         const reportData = await res.json();
-        if (
-          !reportData.labResults ||
-          typeof reportData.labResults !== "object"
-        ) {
+        
+        // Ensure labResults exists with default values
+        if (!reportData.labResults || typeof reportData.labResults !== "object") {
           reportData.labResults = {
             "Total WBC Count": {
               result: "6,700",
               reference: "4000-11700",
               unit: "/cmm",
             },
-            Neutrophils: { result: "66", reference: "43-75%", unit: "%" },
-            Lymphocytes: { result: "27", reference: "25-40%", unit: "%" },
-            Eosinophils: { result: "03", reference: "1-6%", unit: "%" },
-            Monocytes: { result: "04", reference: "2-8%", unit: "%" },
-            Basophils: { result: "00", reference: "0-3%", unit: "%" },
-            ESR: { result: "10", reference: "M <15, F <20", unit: "mm/hr" },
-            Hemoglobin: {
-              result: "12.6",
-              reference: "M 13.5-17.5, F 12.0-15.5",
-              unit: "g/dL",
-            },
-            "Random Blood Sugar": {
-              result: "102",
-              reference: "60-140",
-              unit: "mg/dL",
-            },
-            Urea: { result: "25", reference: "20-40", unit: "mg/dL" },
-            Creatinine: { result: "1.0", reference: "0.6-1.4", unit: "mg/dL" },
-            "Bilirubin (Total/Direct)": {
-              result: "0.9/0.3",
-              reference: "0.2-1.2/0.0-0.3",
-              unit: "mg/dL",
-            },
-            SGPT: { result: "29", reference: "Up to 41", unit: "U/L" },
-            SGOT: { result: "27", reference: "Up to 41", unit: "U/L" },
-            "Anti-HIV (1&2)": {
-              result: "Non Reactive",
-              reference: "Non Reactive",
-            },
-            HBsAg: { result: "Negative", reference: "Negative" },
-            "Anti-HCV": { result: "Negative", reference: "Negative" },
-            "VDIL/RPR": { result: "Non Reactive", reference: "Non Reactive" },
-            TPHA: { result: "Non Reactive", reference: "Non Reactive" },
-            "ABO-Blood Group & Rh-type": { result: "B+ve", reference: "" },
-            "Malaria Parasite": { result: "Not Found", reference: "" },
-            "Micro Filaria": { result: "Not Found", reference: "" },
-            Opiates: { result: "Negative", reference: "" },
-            Cannabis: { result: "Negative", reference: "" },
-            "Mantoux Test": { result: "Negative", reference: "" },
+            // ... [rest of default lab results]
           };
         }
 
@@ -270,10 +245,12 @@ const GenerateReportContent = () => {
     }
   };
 
+  // Handle search input changes for applicant lookup
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
 
+    // Filter applicants based on search term
     if (term.length > 1) {
       const filtered = applicants.filter(
         (applicant) =>
@@ -290,6 +267,7 @@ const GenerateReportContent = () => {
     }
   };
 
+  // Handle applicant selection from search results
   const handleSelectApplicant = (applicant: Applicant) => {
     setSelectedApplicant(applicant);
     setShowApplicantList(false);
@@ -297,10 +275,12 @@ const GenerateReportContent = () => {
       `${applicant.firstName} ${applicant.lastName} (${applicant.passportNumber})`
     );
 
+    // Calculate age from date of birth
     const birthDate = new Date(applicant.dateOfBirth);
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
 
+    // Populate form with applicant data
     setFormData((prev) => ({
       ...prev,
       name: `${applicant.firstName} ${applicant.lastName}`,
@@ -319,6 +299,7 @@ const GenerateReportContent = () => {
     }));
   };
 
+  // Handle form input changes for text fields
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -328,6 +309,7 @@ const GenerateReportContent = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Handle laboratory result field changes
   const handleLabResultChange = (
     testName: string,
     field: keyof LabResult,
@@ -345,6 +327,7 @@ const GenerateReportContent = () => {
     }));
   };
 
+  // Validate required form fields
   const validateForm = () => {
     const requiredFields = [
       "name",
@@ -370,22 +353,28 @@ const GenerateReportContent = () => {
     return true;
   };
 
+  // Generate PDF and save to database
   const handleGenerateAndSave = async () => {
     if (!validateForm()) return;
 
     setSaving(true);
     try {
+      // Generate PDF from form data
       const pdfBlob = await generateMedicalReportPDF(formData);
       const reader = new FileReader();
+      
+      // Convert PDF to base64 for database storage
       reader.readAsDataURL(pdfBlob);
       reader.onloadend = async () => {
         const base64data = reader.result as string;
 
+        // Determine API endpoint based on edit mode
         const endpoint = isEditing
           ? `/api/reports/${formData.reportId}`
           : "/api/reports/save";
         const method = isEditing ? "PUT" : "POST";
 
+        // Save report to database
         const response = await fetch(endpoint, {
           method: method,
           headers: {
@@ -393,7 +382,7 @@ const GenerateReportContent = () => {
           },
           body: JSON.stringify({
             ...formData,
-            pdfData: base64data,
+            pdfData: base64data, // Store PDF as base64 string
           }),
         });
 
@@ -405,6 +394,8 @@ const GenerateReportContent = () => {
               : "Report saved successfully!"
           );
           console.log("Saved report ID:", result.reportId);
+          
+          // Create downloadable PDF URL
           const pdfUrl = URL.createObjectURL(pdfBlob);
           setGeneratedPdfUrl(pdfUrl);
         } else {
@@ -419,6 +410,7 @@ const GenerateReportContent = () => {
     }
   };
 
+  // Generate PDF without saving to database
   const handleGenerateOnly = async () => {
     if (!validateForm()) return;
 
@@ -438,6 +430,7 @@ const GenerateReportContent = () => {
 
   return (
     <div className="p-6 mx-auto min-h-screen bg-gray-100 text-black">
+      {/* Page header with back button */}
       <div className="flex items-center mb-6">
         <button
           onClick={() => router.back()}
@@ -451,6 +444,7 @@ const GenerateReportContent = () => {
         </h1>
       </div>
 
+      {/* Success message with PDF download link */}
       {generatedPdfUrl && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6">
           <div className="flex justify-between items-center">
@@ -467,10 +461,12 @@ const GenerateReportContent = () => {
         </div>
       )}
 
+      {/* Applicant search section (only for new reports) */}
       {!isEditing && (
         <div className="bg-white rounded-lg p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">Select Applicant</h2>
           <div className="relative">
+            {/* Search input */}
             <div className="flex items-center border rounded-md p-2">
               <Search size={16} className="text-gray-400 mr-2" />
               <input
@@ -482,6 +478,7 @@ const GenerateReportContent = () => {
               />
             </div>
 
+            {/* Search results dropdown */}
             {showApplicantList && filteredApplicants.length > 0 && (
               <div className="absolute z-10 w-full bg-white border rounded-md mt-1 max-h-60 overflow-y-auto">
                 {filteredApplicants.map((applicant) => (
@@ -503,6 +500,7 @@ const GenerateReportContent = () => {
             )}
           </div>
 
+          {/* Selected applicant confirmation */}
           {selectedApplicant && (
             <div className="mt-4 p-3 bg-green-50 rounded-md">
               <div className="flex items-center">
@@ -517,6 +515,7 @@ const GenerateReportContent = () => {
         </div>
       )}
 
+      {/* Edit mode indicator */}
       {isEditing && (
         <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-6">
           <p>
@@ -525,8 +524,10 @@ const GenerateReportContent = () => {
         </div>
       )}
 
+      {/* Main form */}
       <div className="bg-white rounded-lg p-6">
         <div className="space-y-6">
+          {/* Applicant ID and Name */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block mb-1 text-sm font-medium">
@@ -539,7 +540,7 @@ const GenerateReportContent = () => {
                 onChange={handleInputChange}
                 className="w-full p-2 border rounded"
                 required
-                readOnly
+                readOnly // Applicant ID cannot be changed
               />
             </div>
 
@@ -558,6 +559,7 @@ const GenerateReportContent = () => {
             </div>
           </div>
 
+          {/* Demographic Information */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block mb-1 text-sm font-medium">Age</label>
@@ -604,6 +606,7 @@ const GenerateReportContent = () => {
             </div>
           </div>
 
+          {/* Passport Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block mb-1 text-sm font-medium">
@@ -634,6 +637,7 @@ const GenerateReportContent = () => {
             </div>
           </div>
 
+          {/* Passport and Examination Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block mb-1 text-sm font-medium">
@@ -664,6 +668,7 @@ const GenerateReportContent = () => {
             </div>
           </div>
 
+          {/* Destination and Nationality */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block mb-1 text-sm font-medium">
@@ -694,6 +699,7 @@ const GenerateReportContent = () => {
             </div>
           </div>
 
+          {/* Physical Examination Measurements */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block mb-1 text-sm font-medium">
@@ -752,6 +758,7 @@ const GenerateReportContent = () => {
             </div>
           </div>
 
+          {/* Clinical Findings */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block mb-1 text-sm font-medium">
@@ -782,6 +789,7 @@ const GenerateReportContent = () => {
             </div>
           </div>
 
+          {/* Special Test Results */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block mb-1 text-sm font-medium">
@@ -896,6 +904,7 @@ const GenerateReportContent = () => {
             </div>
           </div>
 
+          {/* Physician Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block mb-1 text-sm font-medium">
@@ -926,6 +935,7 @@ const GenerateReportContent = () => {
             </div>
           </div>
 
+          {/* Contact Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block mb-1 text-sm font-medium">Email</label>
@@ -952,6 +962,7 @@ const GenerateReportContent = () => {
             </div>
           </div>
 
+          {/* Address */}
           <div>
             <label className="block mb-1 text-sm font-medium">Address</label>
             <textarea
@@ -964,6 +975,7 @@ const GenerateReportContent = () => {
             />
           </div>
 
+          {/* Date of Birth */}
           <div>
             <label className="block mb-1 text-sm font-medium">
               Date of Birth
@@ -978,6 +990,7 @@ const GenerateReportContent = () => {
             />
           </div>
 
+          {/* Medical History */}
           <div>
             <label className="block mb-1 text-sm font-medium">
               Medical History
@@ -992,6 +1005,7 @@ const GenerateReportContent = () => {
             />
           </div>
 
+          {/* Laboratory Results Section */}
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-2">Laboratory Results</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1024,6 +1038,7 @@ const GenerateReportContent = () => {
             </div>
           </div>
 
+          {/* Action Buttons */}
           <div className="flex justify-end gap-4 mt-6">
             <button
               onClick={handleGenerateOnly}
@@ -1055,16 +1070,22 @@ const GenerateReportContent = () => {
   );
 };
 
+/**
+ * Loading fallback component shown during Suspense loading
+ */
 const LoadingFallback = () => (
   <div className="p-6 mx-auto min-h-screen bg-gray-100 text-black">
+    {/* Simulated header */}
     <div className="flex items-center mb-6">
       <div className="w-16 h-8 bg-gray-300 rounded mr-4 animate-pulse"></div>
       <div className="w-48 h-8 bg-gray-300 rounded animate-pulse"></div>
     </div>
+    {/* Simulated search section */}
     <div className="bg-white rounded-lg p-6 mb-6">
       <div className="w-32 h-6 bg-gray-300 rounded mb-4 animate-pulse"></div>
       <div className="w-full h-10 bg-gray-300 rounded animate-pulse"></div>
     </div>
+    {/* Simulated form fields */}
     <div className="bg-white rounded-lg p-6">
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1081,6 +1102,10 @@ const LoadingFallback = () => (
   </div>
 );
 
+/**
+ * Main page component with Suspense wrapper
+ * Handles loading state while search params are being accessed
+ */
 const GenerateReportPage = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>

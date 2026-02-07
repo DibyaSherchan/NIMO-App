@@ -1,15 +1,17 @@
-// app/api/employee/download/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-
 import { connectDB } from "@/lib/mongodb";
 import Applicant from "@/models/Applicant";
 import User from "@/models/User";
 
+/**
+ * Allows a foreign employee to download their own application documents
+ * (medical report, passport scan, or biometric data).
+ */
 export async function GET(req: NextRequest) {
   try {
+    // Verify active session
     const session = await auth();
-
     if (!session || !session.user) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -17,9 +19,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Connect to database
     await connectDB();
+
+    // Fetch requesting user
     const user = await User.findOne({ email: session.user.email });
 
+    // Restrict access to ForeignEmployee role only
     if (!user || user.role !== "ForeignEmployee") {
       return NextResponse.json(
         { error: "Access denied" },
@@ -27,11 +33,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get query parameters
+    // Extract query parameters
     const searchParams = req.nextUrl.searchParams;
     const type = searchParams.get("type");
     const applicantId = searchParams.get("id");
 
+    // Validate required parameters
     if (!type || !applicantId) {
       return NextResponse.json(
         { error: "Missing required parameters" },
@@ -52,10 +59,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Prepare document data and filename
     let documentData: string | null = null;
     let filename = "";
 
-    // Get the appropriate document based on type
+    // Select document based on requested type
     switch (type) {
       case "medical":
         documentData = applicant.medicalReport;
@@ -76,6 +84,7 @@ export async function GET(req: NextRequest) {
         );
     }
 
+    // Ensure document exists
     if (!documentData) {
       return NextResponse.json(
         { error: "Document not available" },
@@ -83,13 +92,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // If the document is stored as base64 or encrypted string
-    // You may need to decode/decrypt it here based on your storage method
-    
-    // Example: If stored as base64
+    /**
+     * If documents are stored as base64 (or encrypted),
+     * decoding or decryption must be handled here.
+     */
+
     let buffer: Buffer;
     try {
-      // Remove data URI prefix if present (e.g., "data:application/pdf;base64,")
+      // Remove base64 data URI prefix if present
       const base64Data = documentData.replace(/^data:.*?;base64,/, "");
       buffer = Buffer.from(base64Data, "base64");
     } catch (error) {
@@ -100,10 +110,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Convert Buffer to Uint8Array for NextResponse
+    // Convert Buffer to Uint8Array for NextResponse compatibility
     const uint8Array = new Uint8Array(buffer);
-    
-    // Return the file as a download
+
+    // Send document as downloadable PDF
     return new NextResponse(uint8Array, {
       headers: {
         "Content-Type": "application/pdf",

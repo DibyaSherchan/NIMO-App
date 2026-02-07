@@ -6,12 +6,18 @@ import Applicant from "@/models/Applicant";
 import User from "@/models/User";
 import Log from "@/models/Log";
 
-
+/**
+ * @route   POST /api/applicants
+ * @desc    Create a new applicant
+ */
 export async function POST(request: NextRequest) {
   const userAgent = request.headers.get("user-agent") || "unknown";
 
   try {
+    // Connect to MongoDB
     await connectDB();
+
+    // Check authentication
     const session = await auth();
 
     if (!session || !session.user?.email) {
@@ -20,9 +26,7 @@ export async function POST(request: NextRequest) {
         action: "APPLICANT_CREATION_FAILED",
         userRole: "system",
         userAgent,
-        details: {
-          error: "Unauthorized - No active session",
-        },
+        details: { error: "Unauthorized - No active session" },
       });
 
       return NextResponse.json(
@@ -30,6 +34,8 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Fetch user
     const user = await User.findOne({ email: session.user.email });
 
     if (!user || !user.region) {
@@ -50,7 +56,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Read form data
     const formData = await request.formData();
+
     const firstName = formData.get("firstName") as string;
     const lastName = formData.get("lastName") as string;
     const email = formData.get("email") as string;
@@ -68,9 +76,9 @@ export async function POST(request: NextRequest) {
     const destinationCountry = formData.get("destinationCountry") as string;
     const jobPosition = formData.get("jobPosition") as string;
     const medicalHistory = (formData.get("medicalHistory") as string) || "";
-    const existingApplicant = await Applicant.findOne({
-      passportNumber: passportNumber,
-    });
+
+    // Check for duplicate passport
+    const existingApplicant = await Applicant.findOne({ passportNumber });
 
     if (existingApplicant) {
       await Log.create({
@@ -80,7 +88,7 @@ export async function POST(request: NextRequest) {
         userAgent,
         details: {
           error: "Duplicate passport number",
-          passportNumber: passportNumber,
+          passportNumber,
           region: user.region,
         },
       });
@@ -90,6 +98,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Validate required fields
     if (
       !firstName ||
       !lastName ||
@@ -117,24 +127,6 @@ export async function POST(request: NextRequest) {
           error: "Missing required fields",
           region: user.region,
           registeredBy: user.email,
-          receivedFields: {
-            firstName: !!firstName,
-            lastName: !!lastName,
-            email: !!email,
-            phone: !!phone,
-            passportNumber: !!passportNumber,
-            passportExpiry: !!passportExpiry,
-            passportIssuePlace: !!passportIssuePlace,
-            dateOfBirth: !!dateOfBirth,
-            nationality: !!nationality,
-            gender: !!gender,
-            maritalStatus: !!maritalStatus,
-            address: !!address,
-            emergencyContact: !!emergencyContact,
-            emergencyPhone: !!emergencyPhone,
-            destinationCountry: !!destinationCountry,
-            jobPosition: !!jobPosition,
-          },
         },
       });
 
@@ -144,6 +136,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build applicant object
     const applicantData = {
       applicantId: `APP-${uuidv4().substring(0, 8).toUpperCase()}`,
       firstName,
@@ -169,16 +162,11 @@ export async function POST(request: NextRequest) {
       registeredBy: user.email,
     };
 
+    // Save applicant
     const applicant = new Applicant(applicantData);
-    console.log("Applicant data before save:", applicantData);
-    console.log("Applicant instance region:", applicant.region);
-    console.log("Applicant instance registeredBy:", applicant.registeredBy);
-
     await applicant.save();
 
-    const savedApplicant = await Applicant.findById(applicant._id);
-    console.log("Saved applicant from DB:", savedApplicant.toObject());
-
+    // Log success
     await Log.create({
       logId: uuidv4(),
       action: "APPLICANT_CREATED",
@@ -186,12 +174,6 @@ export async function POST(request: NextRequest) {
       userAgent,
       details: {
         applicantId: applicant.applicantId,
-        firstName: applicant.firstName,
-        lastName: applicant.lastName,
-        email: applicant.email,
-        passportNumber: applicant.passportNumber,
-        destinationCountry: applicant.destinationCountry,
-        jobPosition: applicant.jobPosition,
         region: applicant.region,
         registeredBy: applicant.registeredBy,
       },
@@ -205,7 +187,9 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error: unknown) {
+    // Handle creation errors
     console.error("Registration error:", error);
+
     await Log.create({
       logId: uuidv4(),
       action: "APPLICANT_CREATION_FAILED",
@@ -213,7 +197,6 @@ export async function POST(request: NextRequest) {
       userAgent,
       details: {
         error: error instanceof Error ? error.message : "Unknown error",
-        errorStack: error instanceof Error ? error.stack : undefined,
       },
     });
 
@@ -224,45 +207,56 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * @route   GET /api/applicants
+ * @desc    Fetch applicants based on user role
+ */
 export async function GET(request: NextRequest) {
   const userAgent = request.headers.get("user-agent") || "unknown";
 
   try {
+    // Connect to MongoDB
     await connectDB();
+
+    // Check authentication
     const session = await auth();
 
     if (!session || !session.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Fetch user
     const user = await User.findOne({ email: session.user.email });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+
+    // Build query based on role
     type ApplicantQuery = {
       region?: string;
       registeredBy?: string;
     };
-    
+
     let query: ApplicantQuery = {};
 
     if (user.role === "Admin") {
       query = {};
-    } else if (user.role === "Agent") {
+    } else if (
+      user.role === "Agent" ||
+      user.role === "MedicalOrganization"
+    ) {
       query = { region: user.region };
-    } else if (user.role === "MedicalOrganization") {
-      query = { region: user.region };
-    } else if (user.role === "ForeignEmployee") {
-      query = { registeredBy: user.email };
     } else {
       query = { registeredBy: user.email };
     }
 
+    // Fetch applicants
     const applicants = await Applicant.find(query, "-__v").sort({
       createdAt: -1,
     });
 
+    // Log fetch action
     await Log.create({
       logId: uuidv4(),
       action: "APPLICANTS_FETCHED",
@@ -273,13 +267,14 @@ export async function GET(request: NextRequest) {
         region: user.region,
         userEmail: user.email,
         filterApplied: JSON.stringify(query),
-        timestamp: new Date().toISOString(),
       },
     });
 
     return NextResponse.json(applicants, { status: 200 });
   } catch (error: unknown) {
+    // Handle fetch errors
     console.error("Fetch applicants error:", error);
+
     await Log.create({
       logId: uuidv4(),
       action: "APPLICANTS_FETCH_FAILED",

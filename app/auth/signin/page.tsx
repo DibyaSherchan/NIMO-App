@@ -5,15 +5,22 @@ import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+/**
+ * SignIn component - handles user authentication
+ * Supports both email/password and Google sign-in
+ */
 export default function SignIn() {
+  // Form state management
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
+  // Get session status and router for navigation
   const { status } = useSession();
   const router = useRouter();
 
-  // Show loading if checking session
+  // Show loading spinner while checking session
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -25,11 +32,13 @@ export default function SignIn() {
     );
   }
 
+  // Handle email/password sign-in form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
+    // Validate form fields
     if (!email || !password) {
       setError("Please fill in all fields");
       setLoading(false);
@@ -37,18 +46,20 @@ export default function SignIn() {
     }
 
     try {
+      // Attempt to sign in with credentials
       const result = await signIn("credentials", {
-        email: email.toLowerCase(),
+        email: email.toLowerCase(), // Normalize email to lowercase
         password,
-        redirect: false, // Don't auto-redirect, handle it manually
+        redirect: false, // Handle redirect manually
       });
 
+      // Handle sign-in result
       if (result?.error) {
         setError("Invalid email or password");
       } else if (result?.ok) {
-        // Success - redirect to home (middleware will handle role-based redirect)
+        // Sign-in successful - redirect to home
         router.push("/");
-        router.refresh();
+        router.refresh(); // Refresh page to update session state
       }
     } catch (error) {
       console.error("Sign in error:", error);
@@ -58,9 +69,11 @@ export default function SignIn() {
     }
   };
 
+  // Handle Google OAuth sign-in
   const handleGoogleSignIn = async () => {
     try {
-      await signIn("google", { callbackUrl: "/" }); // middleware handles role redirect
+      // Redirect to Google OAuth
+      await signIn("google", { callbackUrl: "/" });
     } catch (error) {
       console.error("Google sign in error:", error);
       setError("Google sign in failed. Please try again.");
@@ -80,12 +93,14 @@ export default function SignIn() {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {/* Show error message if any */}
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
               {error}
             </div>
           )}
 
+          {/* Form fields */}
           <div className="space-y-4 text-black">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -120,6 +135,7 @@ export default function SignIn() {
             </div>
           </div>
 
+          {/* Submit button */}
           <div>
             <button
               type="submit"
@@ -130,6 +146,7 @@ export default function SignIn() {
             </button>
           </div>
 
+          {/* Divider for alternative sign-in options */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300" />
@@ -139,6 +156,7 @@ export default function SignIn() {
             </div>
           </div>
 
+          {/* Google sign-in button */}
           <div>
             <button
               type="button"
@@ -149,6 +167,7 @@ export default function SignIn() {
             </button>
           </div>
 
+          {/* Sign-up link */}
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Don&apos;t have an account?{" "}
@@ -158,6 +177,7 @@ export default function SignIn() {
             </p>
           </div>
 
+          {/* Back to home link */}
           <div className="text-center">
             <Link href="/" className="text-sm text-blue-600 hover:text-blue-500">
               ← Back to Home

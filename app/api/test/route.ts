@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 
 export async function GET() {
   try {
-    await connectDB(); // Try connecting to MongoDB
+    await connectDB(); // Trying connection to MongoDB
     return NextResponse.json({ message: "Connected to MongoDB successfully" }, { status: 200 });
   } catch (error) {
     console.error("Database connection error:", error);

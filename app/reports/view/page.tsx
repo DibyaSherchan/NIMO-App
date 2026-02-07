@@ -3,12 +3,14 @@ import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, Download, FileText, Loader2, AlertCircle, Printer, Share2 } from "lucide-react";
 
+// Interface for laboratory test results
 interface LabResult {
   result: string;
   reference: string;
   unit?: string;
 }
 
+// Interface for complete report data
 interface ReportData {
   name: string;
   age: string;
@@ -46,16 +48,22 @@ interface ReportData {
   reportId: string;
 }
 
+/**
+ * Main component for viewing medical reports
+ * Displays PDF preview with metadata and download options
+ */
 const ViewReportContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const reportId = searchParams.get("reportId");
+  const reportId = searchParams.get("reportId"); // Get report ID from URL
   
+  // State management
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [reportData, setReportData] = useState<ReportData | null>(null);
 
+  // Fetch report data when component mounts or reportId changes
   useEffect(() => {
     if (!reportId) {
       setError("No report ID provided");
@@ -66,21 +74,27 @@ const ViewReportContent = () => {
     fetchReport();
   }, [reportId]);
 
+  // Fetch report metadata and PDF from API
   const fetchReport = async () => {
     try {
       setLoading(true);
       setError(null);
+      
+      // First fetch report metadata
       const metadataRes = await fetch(`/api/reports/${reportId}`);
       if (!metadataRes.ok) {
         throw new Error("Failed to fetch report metadata");
       }
       const metadata: ReportData = await metadataRes.json();
       setReportData(metadata);
+      
+      // Then fetch the PDF file
       const pdfRes = await fetch(`/api/reports/view?reportId=${reportId}`);
       if (!pdfRes.ok) {
         throw new Error("Failed to fetch PDF");
       }
 
+      // Create object URL for the PDF blob
       const blob = await pdfRes.blob();
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
@@ -92,17 +106,19 @@ const ViewReportContent = () => {
     }
   };
 
+  // Handle PDF download
   const handleDownload = () => {
     if (pdfUrl) {
       const link = document.createElement("a");
       link.href = pdfUrl;
-      link.download = `medical-report-${reportId}.pdf`;
+      link.download = `medical-report-${reportId}.pdf`; // Dynamic filename
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     }
   };
 
+  // Handle print functionality
   const handlePrint = () => {
     if (pdfUrl) {
       const printWindow = window.open(pdfUrl);
@@ -114,6 +130,7 @@ const ViewReportContent = () => {
     }
   };
 
+  // Handle share functionality (modern browsers) or copy link
   const handleShare = async () => {
     if (navigator.share && pdfUrl) {
       try {
@@ -126,11 +143,13 @@ const ViewReportContent = () => {
         console.error("Error sharing:", err);
       }
     } else {
+      // Fallback: copy link to clipboard
       navigator.clipboard.writeText(window.location.href);
       alert("Link copied to clipboard!");
     }
   };
 
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
@@ -143,10 +162,12 @@ const ViewReportContent = () => {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
         <div className="max-w-2xl mx-auto">
+          {/* Back button */}
           <button
             onClick={() => router.back()}
             className="flex items-center px-4 py-2 bg-white rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-md mb-6"
@@ -155,6 +176,7 @@ const ViewReportContent = () => {
             <span className="font-medium">Back</span>
           </button>
 
+          {/* Error message */}
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
             <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="w-10 h-10 text-red-600" />
@@ -173,11 +195,14 @@ const ViewReportContent = () => {
     );
   }
 
+  // Main report view
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Header section with navigation and actions */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {/* Left side: Back button and report info */}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.back()}
@@ -205,6 +230,7 @@ const ViewReportContent = () => {
               </div>
             </div>
 
+            {/* Right side: Action buttons */}
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={handlePrint}
@@ -232,6 +258,8 @@ const ViewReportContent = () => {
             </div>
           </div>
         </div>
+
+        {/* Report metadata cards */}
         {reportData && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
@@ -257,6 +285,8 @@ const ViewReportContent = () => {
             </div>
           </div>
         )}
+
+        {/* PDF preview container */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800">Report Preview</h2>
@@ -265,6 +295,7 @@ const ViewReportContent = () => {
           <div className="p-4 bg-gray-100">
             {pdfUrl ? (
               <div className="bg-white rounded-lg shadow-inner overflow-hidden" style={{ height: 'calc(100vh - 400px)', minHeight: '600px' }}>
+                {/* PDF iframe viewer */}
                 <iframe
                   src={pdfUrl}
                   className="w-full h-full"
@@ -282,6 +313,8 @@ const ViewReportContent = () => {
             )}
           </div>
         </div>
+
+        {/* Report information footer */}
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -306,6 +339,10 @@ const ViewReportContent = () => {
   );
 };
 
+/**
+ * Main page component with Suspense wrapper
+ * Handles loading state while search params are being accessed
+ */
 const ViewReportPage = () => {
   return (
     <Suspense fallback={
